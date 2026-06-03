@@ -7,6 +7,7 @@ import { CATEGORY_LABELS, CATEGORY_ORDER } from '../lib/types';
 import { validateBuild } from '../rules/compatibility';
 import { runBenchmark } from '../rules/benchmark';
 import { submitBuild } from '../lib/submit';
+import { analyzeBuild } from '../lib/analyze';
 
 export default function Builder() {
   const {
@@ -49,6 +50,15 @@ export default function Builder() {
     setSubmitState({ busy: true, msg: '' });
     const r = await submitBuild(username.trim(), buildName.trim(), build);
     setSubmitState({ busy: false, msg: r.ok ? `✅ Submitted! Rank #${r.rank ?? '—'}` : `⚠️ ${r.error}` });
+  };
+
+  // AI analysis
+  const [ai, setAi] = useState<{ busy: boolean; text: string; err: string }>({ busy: false, text: '', err: '' });
+  const onAnalyze = async () => {
+    if (!result) return;
+    setAi({ busy: true, text: '', err: '' });
+    const r = await analyzeBuild(build, result);
+    setAi({ busy: false, text: r.ok ? (r.analysis ?? '') : '', err: r.ok ? '' : (r.error ?? 'failed') });
   };
 
   return (
@@ -160,6 +170,11 @@ export default function Builder() {
               <button className="btn accent wide" onClick={() => { setModalOpen(true); setSubmitState({ busy: false, msg: '' }); }}>
                 🏆 Submit to Leaderboard
               </button>
+              <button className="btn wide" disabled={ai.busy} onClick={onAnalyze}>
+                {ai.busy ? '🤖 Analyzing…' : '🤖 Analyze with AI'}
+              </button>
+              {ai.text && <div className="ai-box">{ai.text}</div>}
+              {ai.err && <p className="muted small">⚠️ {ai.err}</p>}
               <button className="btn ghost wide" onClick={() => setPhase('building')}>Tweak build</button>
             </>
           )}
