@@ -17,7 +17,7 @@ const clean = (s: string, max: number) => s.replace(/[<>]/g, '').trim().slice(0,
  * (runBenchmark) and the full component spec is stored, so any entry can be
  * re-verified/re-scored later by an admin if needed.
  */
-export async function submitBuild(username: string, buildName: string, build: Build): Promise<SubmitResult> {
+export async function submitBuild(username: string, buildName: string, build: Build, competitionId?: string | null): Promise<SubmitResult> {
   if (!isBuildValid(build)) return { ok: false, error: 'Build is not valid' };
   const uname = clean(username, 24);
   const bname = clean(buildName, 40);
@@ -31,6 +31,7 @@ export async function submitBuild(username: string, buildName: string, build: Bu
     username: uname, build_name: bname,
     cpu_id: cpu.id, gpu_id: gpu.id, cpu_label: cpu.model, gpu_label: gpu.model,
     build_spec: ids, final_score: breakdown.finalScore, score_breakdown: breakdown,
+    competition_id: competitionId ?? null,
   });
   if (error) {
     const hint = error.message.includes('does not exist') || error.code === 'PGRST205'
