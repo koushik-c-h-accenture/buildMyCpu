@@ -7,14 +7,18 @@ import type { Case, Cooler, Cpu, Gpu, Mobo, Psu, Ram, Storage, Fans } from '../l
 
 const S = 1 / 100; // mm -> scene units
 
-/** A spinning fan (hub + blades), local spin axis = +Z. */
-export function Fan({ radius = 0.45, color = '#15151b' }: { radius?: number; color?: string }) {
+/** A spinning fan (hub + blades + RGB glow ring), local spin axis = +Z. */
+export function Fan({ radius = 0.45, color = '#15151b', glow = '#26e0ff' }: { radius?: number; color?: string; glow?: string }) {
   const ref = useRef<THREE.Group>(null);
+  const ring = useRef<THREE.MeshStandardMaterial>(null);
   useFrame((_, dt) => {
-    if (!ref.current) return;
     const phase = useBuildStore.getState().phase;
-    const speed = phase === 'testing' ? 16 : phase === 'done' ? 5 : 1.3;
-    ref.current.rotation.z += dt * speed;
+    if (ref.current) {
+      const speed = phase === 'testing' ? 16 : phase === 'done' ? 5 : 1.3;
+      ref.current.rotation.z += dt * speed;
+    }
+    // pulse the RGB ring brighter under load
+    if (ring.current) ring.current.emissiveIntensity = phase === 'testing' ? 2.6 : 1.4;
   });
   const blades = [];
   for (let i = 0; i < 9; i++) {
@@ -28,10 +32,15 @@ export function Fan({ radius = 0.45, color = '#15151b' }: { radius?: number; col
   }
   return (
     <group>
-      {/* housing ring */}
+      {/* dark housing */}
       <mesh>
-        <torusGeometry args={[radius, radius * 0.12, 8, 24]} />
+        <torusGeometry args={[radius, radius * 0.14, 8, 24]} />
         <meshStandardMaterial color="#0c0c10" metalness={0.4} roughness={0.6} />
+      </mesh>
+      {/* glowing RGB ring */}
+      <mesh>
+        <torusGeometry args={[radius * 0.92, radius * 0.06, 8, 28]} />
+        <meshStandardMaterial ref={ring} color={glow} emissive={glow} emissiveIntensity={1.4} toneMapped={false} />
       </mesh>
       <group ref={ref}>
         <mesh rotation={[Math.PI / 2, 0, 0]}>
@@ -109,8 +118,8 @@ export function RamPart({ c }: { c: Ram }) {
       <group key={i} position={[0, 0, i * 0.12]}>
         <Box size={[0.16, 0.52, 0.06]} color={c.color} metalness={0.6} roughness={0.35} />
         <mesh position={[0, 0.28, 0]}>
-          <boxGeometry args={[0.17, 0.06, 0.065]} />
-          <meshStandardMaterial color="#e8e8ee" emissive={c.color} emissiveIntensity={0.25} />
+          <boxGeometry args={[0.17, 0.07, 0.065]} />
+          <meshStandardMaterial color="#ffffff" emissive={c.color} emissiveIntensity={1.0} toneMapped={false} />
         </mesh>
       </group>,
     );
@@ -134,7 +143,7 @@ export function GpuPart({ c }: { c: Gpu }) {
       {/* fans on the underside (-X face) */}
       {[-1, 1].map((s) => (
         <group key={s} position={[-th * 0.5 - 0.01, -ht * 0.05, s * len * 0.24]} rotation={[0, Math.PI / 2, 0]}>
-          <Fan radius={Math.min(0.5, ht * 0.42)} color="#101015" />
+          <Fan radius={Math.min(0.5, ht * 0.42)} color="#101015" glow="#39ffcf" />
         </group>
       ))}
     </group>
@@ -149,7 +158,7 @@ export function PsuPart({ c }: { c: Psu }) {
     <group>
       <Box size={[w, h, d]} color={c.color} metalness={0.5} roughness={0.5} edges="#0a0a0a" />
       <group position={[0, h * 0.5 + 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <Fan radius={Math.min(0.6, w * 0.4)} color="#0c0c10" />
+        <Fan radius={Math.min(0.6, w * 0.4)} color="#0c0c10" glow="#2f6df0" />
       </group>
     </group>
   );
@@ -181,7 +190,7 @@ export function CoolerPart({ c }: { c: Cooler }) {
         </mesh>
         {/* fan on the -X face */}
         <group position={[-hX * 0.55, wY * 0.1, 0]} rotation={[0, Math.PI / 2, 0]}>
-          <Fan radius={Math.min(0.6, wY * 0.4)} color={c.color} />
+          <Fan radius={Math.min(0.6, wY * 0.4)} color={c.color} glow="#26e0ff" />
         </group>
       </group>
     );
@@ -192,11 +201,11 @@ export function CoolerPart({ c }: { c: Cooler }) {
     <group>
       <mesh>
         <cylinderGeometry args={[0.22, 0.22, 0.16, 24]} />
-        <meshStandardMaterial color="#1a1a22" metalness={0.6} roughness={0.3} emissive={c.color} emissiveIntensity={0.35} />
+        <meshStandardMaterial color="#1a1a22" metalness={0.6} roughness={0.3} emissive={c.color} emissiveIntensity={0.5} />
       </mesh>
       <mesh position={[0, 0.09, 0]}>
         <cylinderGeometry args={[0.18, 0.18, 0.03, 24]} />
-        <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={0.6} />
+        <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={1.4} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -212,7 +221,7 @@ export function RadiatorPart({ c }: { c: Cooler }) {
     const z = -len / 2 + len / (fanCount * 2) + (i * len) / fanCount;
     fans.push(
       <group key={i} position={[0, -0.18, z]} rotation={[Math.PI / 2, 0, 0]}>
-        <Fan radius={fanR} color="#101015" />
+        <Fan radius={fanR} color="#101015" glow="#26e0ff" />
       </group>,
     );
   }
@@ -242,13 +251,14 @@ export function StoragePart({ c }: { c: Storage }) {
   );
 }
 
+const RGB = ['#ff3b6b', '#39e06b', '#3b7bff', '#ffd23b'];
 export function FansPart({ c }: { c: Fans }) {
   const n = Math.min(3, c.count);
   const fans = [];
   for (let i = 0; i < n; i++) {
     fans.push(
       <group key={i} position={[0, (i - (n - 1) / 2) * 1.05, 0]}>
-        <Fan radius={0.48} color={c.color} />
+        <Fan radius={0.48} color={c.color} glow={RGB[i % RGB.length]} />
       </group>,
     );
   }
@@ -305,8 +315,8 @@ export function Airflow({ extent }: { extent: [number, number, number] }) {
   for (let i = 0; i < 10; i++) {
     streaks.push(
       <mesh key={i} position={[(Math.random() - 0.5) * extent[0] * 1.4, (Math.random() - 0.5) * extent[1] * 1.4, (Math.random() - 0.5) * extent[2] * 2]}>
-        <planeGeometry args={[0.04, 0.5]} />
-        <meshBasicMaterial color="#6cd0ff" transparent opacity={0.3} side={THREE.DoubleSide} />
+        <planeGeometry args={[0.05, 0.6]} />
+        <meshBasicMaterial color="#0a86ff" transparent opacity={0.5} side={THREE.DoubleSide} toneMapped={false} />
       </mesh>,
     );
   }
@@ -321,8 +331,8 @@ export function CaseShell({ c }: { c: Case }) {
     <group>
       <mesh>
         <boxGeometry args={[w, h, d]} />
-        <meshStandardMaterial color={c.color} transparent opacity={0.06} side={THREE.BackSide} />
-        <Edges color="#8087a0" />
+        <meshStandardMaterial color={c.color} transparent opacity={0.05} side={THREE.BackSide} />
+        <Edges color="#3a3f4a" />
       </mesh>
       {/* solid back panel (motherboard tray side) */}
       <mesh position={[w / 2 - 0.02, 0, 0]}>

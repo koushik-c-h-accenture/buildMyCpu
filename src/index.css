@@ -1,14 +1,14 @@
 :root {
-  --bg: #11111b;
-  --panel: #181825;
-  --panel2: #1e1e2e;
-  --border: #313244;
-  --text: #cdd6f4;
-  --muted: #6c7086;
-  --accent: #89b4fa;
-  --accent2: #f38ba8;
-  --green: #a6e3a1;
-  --red: #f38ba8;
+  --bg: #f5f3ee;        /* milky white */
+  --panel: #ffffff;
+  --panel2: #efece5;
+  --border: #d9d4ca;
+  --text: #20242c;
+  --muted: #6b7280;
+  --accent: #2f6df0;
+  --accent2: #e0457b;
+  --green: #1f9d57;
+  --red: #d63b3b;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
@@ -48,14 +48,14 @@ body { background: var(--bg); color: var(--text); }
   border-radius: 8px; padding: 9px 10px; cursor: pointer; color: var(--text);
 }
 .part:hover { border-color: var(--accent); }
-.part.selected { border-color: var(--green); background: #1c2620; }
+.part.selected { border-color: var(--green); background: #e6f6ec; }
 .dot { width: 12px; height: 12px; border-radius: 50%; }
 .part-name { font-size: 13px; }
 .part-meta { font-size: 11px; color: var(--muted); }
 
 .inspector h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
 .errors { list-style: none; padding: 0; margin: 0 0 14px; display: flex; flex-direction: column; gap: 6px; }
-.errors li { font-size: 12px; color: var(--red); background: #2a1a22; padding: 7px 9px; border-radius: 6px; }
+.errors li { font-size: 12px; color: #a51f1f; background: #fdeaea; border: 1px solid #f3c6c6; padding: 7px 9px; border-radius: 6px; }
 .ok { color: var(--green); font-size: 13px; }
 
 .result { margin-top: 16px; text-align: center; }
@@ -69,8 +69,8 @@ body { background: var(--bg); color: var(--text); }
 }
 .btn:hover { border-color: var(--accent); }
 .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
-.btn.primary { background: var(--accent); color: #11111b; border-color: var(--accent); font-weight: 600; }
-.btn.accent { background: var(--accent2); color: #11111b; border-color: var(--accent2); font-weight: 600; }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+.btn.accent { background: var(--accent2); color: #fff; border-color: var(--accent2); font-weight: 600; }
 .btn.ghost { background: transparent; }
 .wide { width: 100%; margin-top: 10px; }
 
@@ -112,7 +112,7 @@ code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
 
 .overlay {
   position: absolute; inset: 0; display: flex; flex-direction: column; gap: 8px;
-  align-items: center; justify-content: center; background: rgba(13,13,20,0.55);
+  align-items: center; justify-content: center; background: rgba(245,243,238,0.66);
   color: var(--text); font-size: 16px; backdrop-filter: blur(2px); pointer-events: none;
 }
 .spinner {

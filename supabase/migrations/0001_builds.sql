@@ -29,3 +29,10 @@ drop policy if exists "public read builds" on public.builds;
 create policy "public read builds"
   on public.builds for select
   using (true);
+
+-- Allow the app (anon publishable key) to submit builds directly. The full
+-- build_spec is stored so any entry can be re-scored/audited by an admin.
+drop policy if exists "public insert builds" on public.builds;
+create policy "public insert builds"
+  on public.builds for insert
+  with check (true);
