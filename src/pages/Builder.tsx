@@ -7,7 +7,7 @@ import {
   CATEGORY_LABELS, CATEGORY_ORDER, REQUIRED_CATEGORIES, OPTIONAL_CATEGORIES,
 } from '../lib/types';
 import { validateBuild } from '../rules/compatibility';
-import { runBenchmark } from '../rules/benchmark';
+import { runBenchmark, stressReport } from '../rules/benchmark';
 import { submitBuild } from '../lib/submit';
 
 const SUBSCORES = [
@@ -159,10 +159,25 @@ export default function Builder() {
                 <li><span>Performance Index</span><span>{result.performanceIndex.toLocaleString()}</span></li>
                 <li><span>Perf / Watt</span><span>{result.perfPerWatt}</span></li>
                 <li><span>Perf / $</span><span>{result.perfPerDollar}</span></li>
-                <li><span>Power draw</span><span>{result.totalWatts} W</span></li>
                 <li><span>Total cost</span><span>${result.totalPrice.toLocaleString()}</span></li>
                 <li><span>Build weight</span><span>{result.totalWeightKg} kg</span></li>
               </ul>
+              {(() => {
+                const rp = stressReport(build);
+                return (
+                  <>
+                    <h3 className="report-h">🔬 Stress Test Report</h3>
+                    <ul className="breakdown">
+                      <li><span>CPU temp @ load</span><span className={rp.cpuTempC >= 90 ? 'hot' : ''}>{rp.cpuTempC}°C</span></li>
+                      <li><span>CPU clock @ load</span><span className={rp.throttling ? 'hot' : ''}>{rp.effectiveClockGhz}/{rp.baseClockGhz} GHz {rp.throttling ? '⚠️' : '✓'}</span></li>
+                      <li><span>GPU temp @ load</span><span className={rp.gpuTempC >= 84 ? 'hot' : ''}>{rp.gpuTempC}°C</span></li>
+                      <li><span>Render index (FPS)</span><span>{rp.fpsIndex}</span></li>
+                      <li><span>Power draw @ load</span><span>{rp.powerDrawW} W</span></li>
+                      <li><span>Active airflow fans</span><span>{rp.airflowFans}</span></li>
+                    </ul>
+                  </>
+                );
+              })()}
               <button className="btn accent wide" onClick={() => { setModalOpen(true); setSubmitState({ busy: false, msg: '' }); }}>
                 🏆 Submit to Leaderboard
               </button>

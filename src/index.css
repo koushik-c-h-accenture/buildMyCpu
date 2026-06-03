@@ -121,6 +121,9 @@ code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.report-h { font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin: 16px 0 4px; }
+.breakdown .hot { color: var(--red); font-weight: 700; }
+
 .subscores { display: flex; flex-direction: column; gap: 9px; margin: 16px 0; }
 .subscore-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
 .subscore-top span { color: var(--muted); }
