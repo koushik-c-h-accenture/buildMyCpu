@@ -16,7 +16,22 @@ on a global leaderboard — no login required.
 
 ## Status
 
-🚧 Project scaffolding in progress.
+✅ Playable. Build a PC, validate compatibility, run the benchmark, get a score.
+The global leaderboard activates once the Supabase backend is provisioned — see
+[`supabase/README.md`](./supabase/README.md).
+
+## Local dev
+
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # production build into dist/
+```
+
+## Live site
+
+https://koushik-c-h-accenture.github.io/buildMyCpu/ (deploys automatically on
+push to `main` via GitHub Actions).
 
 ## Secrets / configuration
 
