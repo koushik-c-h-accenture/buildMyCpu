@@ -55,10 +55,14 @@ and compete on a global leaderboard (no login required).
 - "Power On & Test": compatible → load test (airflow streaks + heat light); incompatible →
   `Burst` (red flash + particle explosion) + error list. Phase machine in `buildStore.ts`.
 
-## Backend deploy status (BLOCKER for submit)
-- `builds` table + `submit-build` function are NOT yet deployed → leaderboard submit fails
-  with "fetch failed". Needs a Supabase **access token** (publishable key can't create
-  tables / deploy functions). Supabase CLI not installed locally.
+## Backend status (LIVE)
+- `builds` + `competitions` tables exist in Supabase (created via Management API; SQL in
+  `supabase/migrations/0002_competitions.sql`). RLS: public read/insert; competitions also
+  public update (PIN is UI-gated only). Submit + full competition loop verified end-to-end.
+- Submit is **direct client insert** (scores client-side; build_spec stored for audit). The
+  authoritative `submit-build` edge function exists but is unused/undeployed.
+- To run DDL via Management API: POST https://api.supabase.com/v1/projects/<ref>/database/query
+  with a Bearer access token AND a browser User-Agent (Cloudflare blocks default UAs → 1010).
 
 ## Known TODO / future
 - AI build analysis (Claude API) — DEFERRED: user has no Anthropic API key. Code exists
