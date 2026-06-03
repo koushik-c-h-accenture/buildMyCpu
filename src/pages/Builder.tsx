@@ -3,11 +3,21 @@ import { Link } from 'react-router-dom';
 import BuildScene from '../scene/BuildScene';
 import { useBuildStore } from '../store/buildStore';
 import { byCategory } from '../data/catalog';
-import { CATEGORY_LABELS, CATEGORY_ORDER } from '../lib/types';
+import {
+  CATEGORY_LABELS, CATEGORY_ORDER, REQUIRED_CATEGORIES, OPTIONAL_CATEGORIES,
+} from '../lib/types';
 import { validateBuild } from '../rules/compatibility';
 import { runBenchmark } from '../rules/benchmark';
 import { submitBuild } from '../lib/submit';
-import { analyzeBuild } from '../lib/analyze';
+
+const SUBSCORES = [
+  ['performance', '🚀 Performance'], ['value', '💲 Value'], ['efficiency', '⚡ Efficiency'],
+  ['thermal', '❄️ Thermal'], ['reliability', '🛡️ Reliability'], ['scalability', '📈 Scalability'],
+] as const;
+
+function Bar({ v }: { v: number }) {
+  return <div className="bar"><div className="bar-fill" style={{ width: `${v}%` }} /></div>;
+}
 
 export default function Builder() {
   const {
@@ -16,8 +26,8 @@ export default function Builder() {
   } = useBuildStore();
 
   const parts = byCategory(activeCategory);
-  const selectedCount = CATEGORY_ORDER.filter((c) => build[c]).length;
-  const allSelected = selectedCount === CATEGORY_ORDER.length;
+  const selectedCount = REQUIRED_CATEGORIES.filter((c) => build[c]).length;
+  const allSelected = selectedCount === REQUIRED_CATEGORIES.length;
   const totals = useMemo(() => {
     let price = 0, watts = 0;
     for (const c of CATEGORY_ORDER) { price += build[c]?.priceUsd ?? 0; watts += build[c]?.tdpWatts ?? 0; }
@@ -27,21 +37,15 @@ export default function Builder() {
   const timer = useRef<number | null>(null);
   const runTest = () => {
     if (!allSelected) return;
+    const errs = validateBuild(build).filter((r) => !r.ok);
     setPhase('testing');
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
-      const errs = validateBuild(build).filter((r) => !r.ok);
-      if (errs.length) {
-        setErrors(errs);
-        setPhase('failed');
-      } else {
-        setResult(runBenchmark(build));
-        setPhase('done');
-      }
-    }, 2200);
+      if (errs.length) { setErrors(errs); setPhase('failed'); }
+      else { setResult(runBenchmark(build)); setPhase('done'); }
+    }, errs.length ? 1400 : 2400);
   };
 
-  // submit modal
   const [modalOpen, setModalOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [buildName, setBuildName] = useState('');
@@ -52,34 +56,30 @@ export default function Builder() {
     setSubmitState({ busy: false, msg: r.ok ? `✅ Submitted! Rank #${r.rank ?? '—'}` : `⚠️ ${r.error}` });
   };
 
-  // AI analysis
-  const [ai, setAi] = useState<{ busy: boolean; text: string; err: string }>({ busy: false, text: '', err: '' });
-  const onAnalyze = async () => {
-    if (!result) return;
-    setAi({ busy: true, text: '', err: '' });
-    const r = await analyzeBuild(build, result);
-    setAi({ busy: false, text: r.ok ? (r.analysis ?? '') : '', err: r.ok ? '' : (r.error ?? 'failed') });
-  };
-
   return (
     <div className="builder">
       <header className="topbar">
         <h1>🖥️ Build My PC</h1>
-        <Link className="btn" to="/leaderboard">🏆 Leaderboard</Link>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link className="btn" to="/scoring">📊 Scoring</Link>
+          <Link className="btn" to="/leaderboard">🏆 Leaderboard</Link>
+        </div>
       </header>
 
       <div className="layout">
-        {/* Catalog */}
         <aside className="panel catalog">
           <div className="tabs">
             {CATEGORY_ORDER.map((cat) => (
               <button key={cat}
                 className={`tab ${cat === activeCategory ? 'active' : ''} ${build[cat] ? 'filled' : ''}`}
                 onClick={() => setActiveCategory(cat)}>
-                {CATEGORY_LABELS[cat]}{build[cat] ? ' ✓' : ''}
+                {CATEGORY_LABELS[cat]}{build[cat] ? ' ✓' : OPTIONAL_CATEGORIES.includes(cat) ? ' *' : ''}
               </button>
             ))}
           </div>
+          {OPTIONAL_CATEGORIES.includes(activeCategory) && (
+            <p className="muted small">Optional — improves airflow/thermals &amp; scalability.</p>
+          )}
           <div className="parts">
             {parts.map((p) => {
               const selected = build[activeCategory]?.id === p.id;
@@ -96,19 +96,17 @@ export default function Builder() {
           <button className="btn ghost wide" onClick={reset}>Reset build</button>
         </aside>
 
-        {/* 3D viewport */}
         <main className="viewport">
           <BuildScene build={build} />
           {phase === 'testing' && (
             <div className="overlay">
               <div className="spinner" />
-              <div>Running benchmark…</div>
-              <div className="muted small">Stress-testing CPU &amp; GPU, checking thermals</div>
+              <div>Powering on &amp; stress-testing…</div>
+              <div className="muted small">CPU + GPU load, thermals, power delivery</div>
             </div>
           )}
         </main>
 
-        {/* Inspector */}
         <aside className="panel inspector">
           {phase === 'building' && (
             <>
@@ -117,33 +115,29 @@ export default function Builder() {
                 {CATEGORY_ORDER.map((cat) => (
                   <li key={cat}>
                     <span className="muted">{CATEGORY_LABELS[cat]}</span>
-                    <span>{build[cat] ? build[cat]!.model : '—'}</span>
+                    <span>{build[cat] ? build[cat]!.model : (OPTIONAL_CATEGORIES.includes(cat) ? '— (optional)' : '—')}</span>
                   </li>
                 ))}
               </ul>
               <div className="totals">
                 <div><span className="muted">Total cost</span><strong>${totals.price.toLocaleString()}</strong></div>
-                <div><span className="muted">Est. power draw</span><strong>{totals.watts} W</strong></div>
+                <div><span className="muted">Est. power</span><strong>{totals.watts} W</strong></div>
               </div>
-              <button className="btn primary wide" disabled={!allSelected} onClick={runTest}>
-                ⚡ Test &amp; Benchmark
-              </button>
+              <button className="btn primary wide" disabled={!allSelected} onClick={runTest}>🔌 Power On &amp; Test</button>
               {!allSelected && (
-                <p className="muted small center">Select all {CATEGORY_ORDER.length} components
-                  ({selectedCount}/{CATEGORY_ORDER.length})</p>
+                <p className="muted small center">Select all {REQUIRED_CATEGORIES.length} required parts
+                  ({selectedCount}/{REQUIRED_CATEGORIES.length})</p>
               )}
             </>
           )}
 
-          {phase === 'testing' && <p className="muted">Benchmarking in progress…</p>}
+          {phase === 'testing' && <p className="muted">Benchmark running…</p>}
 
           {phase === 'failed' && (
             <>
-              <h2 className="danger">❌ Build Failed</h2>
-              <p className="muted small">Compatibility problems were detected during the pre-boot check:</p>
-              <ul className="errors">
-                {errors.map((e) => <li key={e.code}>{e.message}</li>)}
-              </ul>
+              <h2 className="danger">💥 Build Failed — it won't POST</h2>
+              <p className="muted small">The system shut down. Incompatibilities detected:</p>
+              <ul className="errors">{errors.map((e) => <li key={e.code}>{e.message}</li>)}</ul>
               <button className="btn primary wide" onClick={() => setPhase('building')}>← Fix the build</button>
             </>
           )}
@@ -152,29 +146,26 @@ export default function Builder() {
             <>
               <h2 className="ok">✅ Benchmark Complete</h2>
               <div className="big-score">{result.finalScore.toLocaleString()}</div>
-              <div className="muted center">Performance Score</div>
-              <div className="stat-grid">
-                <div className="stat"><span>❄️ Cooling</span><b>{result.coolingScore}/100</b></div>
-                <div className="stat"><span>💲 Value</span><b>{result.valueScore}</b></div>
-                <div className="stat"><span>📊 Throughput</span><b>{result.throughputScore.toLocaleString()}</b></div>
-                <div className="stat"><span>⚡ Power</span><b>{result.totalWatts} W</b></div>
-                <div className="stat"><span>🛒 Cost</span><b>${result.totalPrice.toLocaleString()}</b></div>
-                <div className="stat"><span>🌡️ Thermal</span><b>×{result.thermalFactor}</b></div>
+              <div className="muted center">Competition Score (/10,000)</div>
+              <div className="subscores">
+                {SUBSCORES.map(([k, label]) => (
+                  <div className="subscore" key={k}>
+                    <div className="subscore-top"><span>{label}</span><b>{result[k]}</b></div>
+                    <Bar v={result[k] as number} />
+                  </div>
+                ))}
               </div>
               <ul className="breakdown">
-                <li><span>CPU score</span><span>{result.cpuScore.toLocaleString()}</span></li>
-                <li><span>GPU score</span><span>{result.gpuScore.toLocaleString()}</span></li>
-                <li><span>Synergy</span><span>×{result.synergyFactor}</span></li>
-                <li><span>Memory</span><span>×{result.memoryFactor}</span></li>
+                <li><span>Performance Index</span><span>{result.performanceIndex.toLocaleString()}</span></li>
+                <li><span>Perf / Watt</span><span>{result.perfPerWatt}</span></li>
+                <li><span>Perf / $</span><span>{result.perfPerDollar}</span></li>
+                <li><span>Power draw</span><span>{result.totalWatts} W</span></li>
+                <li><span>Total cost</span><span>${result.totalPrice.toLocaleString()}</span></li>
+                <li><span>Build weight</span><span>{result.totalWeightKg} kg</span></li>
               </ul>
               <button className="btn accent wide" onClick={() => { setModalOpen(true); setSubmitState({ busy: false, msg: '' }); }}>
                 🏆 Submit to Leaderboard
               </button>
-              <button className="btn wide" disabled={ai.busy} onClick={onAnalyze}>
-                {ai.busy ? '🤖 Analyzing…' : '🤖 Analyze with AI'}
-              </button>
-              {ai.text && <div className="ai-box">{ai.text}</div>}
-              {ai.err && <p className="muted small">⚠️ {ai.err}</p>}
               <button className="btn ghost wide" onClick={() => setPhase('building')}>Tweak build</button>
             </>
           )}
@@ -186,10 +177,10 @@ export default function Builder() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Submit your build</h3>
             <label>Username
-              <input value={username} maxLength={24} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. SilentFan99" />
+              <input value={username} maxLength={24} onChange={(e) => setUsername(e.target.value)} placeholder="e.g. team-alpha" />
             </label>
             <label>Build name
-              <input value={buildName} maxLength={40} onChange={(e) => setBuildName(e.target.value)} placeholder="e.g. The Inferno" />
+              <input value={buildName} maxLength={40} onChange={(e) => setBuildName(e.target.value)} placeholder="e.g. The Workhorse" />
             </label>
             <div className="modal-actions">
               <button className="btn ghost" onClick={() => setModalOpen(false)}>Cancel</button>

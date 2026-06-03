@@ -17,12 +17,14 @@ type Comp = any;
 const CATALOG = catalogJson as Comp[];
 const byId = (id: string) => CATALOG.find((c) => c.id === id);
 
-const REQUIRED: Cat[] = ['CASE', 'MOBO', 'CPU', 'COOLER', 'RAM', 'GPU', 'PSU'];
+const REQUIRED: Cat[] = ['CASE', 'MOBO', 'CPU', 'COOLER', 'RAM', 'GPU', 'STORAGE', 'PSU'];
+const clampN = (n: number, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
+const draw = (b: Record<string, Comp>) => Object.values(b).reduce((s, c) => s + (c.tdpWatts ?? 0), 0);
 
 // ---- validation (mirror of src/rules/compatibility.ts) ----------------------
 function validate(b: Record<string, Comp>): string | null {
   for (const cat of REQUIRED) if (!b[cat]) return `Missing ${cat}`;
-  const { CPU: cpu, GPU: gpu, MOBO: mobo, RAM: ram, PSU: psu, COOLER: cooler, CASE: pc } = b;
+  const { CPU: cpu, GPU: gpu, MOBO: mobo, RAM: ram, PSU: psu, COOLER: cooler, CASE: pc, STORAGE: st } = b;
   if (cpu.socket !== mobo.socket) return `CPU ${cpu.socket} vs motherboard ${mobo.socket}`;
   if (ram.memoryType !== mobo.memoryType) return `Motherboard is ${mobo.memoryType}, RAM is ${ram.memoryType}`;
   if (cpu.memoryType !== ram.memoryType) return `CPU is ${cpu.memoryType}, RAM is ${ram.memoryType}`;
@@ -35,34 +37,57 @@ function validate(b: Record<string, Comp>): string | null {
   } else if (!pc.radiatorSupportMm.includes(cooler.radiatorSizeMm)) {
     return `${cooler.radiatorSizeMm}mm radiator doesn't fit the case`;
   }
-  const draw = REQUIRED.reduce((s, c) => s + (b[c].tdpWatts ?? 0), 0);
-  if (psu.wattage < draw * 1.25) return `PSU too weak (need ~${Math.ceil(draw * 1.25)}W)`;
+  if (st.iface === 'NVMe' && mobo.m2Slots < 1) return 'No M.2 slot for the NVMe drive';
+  if (psu.wattage < draw(b) * 1.25) return `PSU too weak (need ~${Math.ceil(draw(b) * 1.25)}W)`;
   return null;
 }
 
-// ---- scoring (mirror of src/rules/benchmark.ts) -----------------------------
-function score(b: Record<string, Comp>) {
-  const { CPU: cpu, GPU: gpu, RAM: ram, COOLER: cooler } = b;
-  const ratio = cooler.dissipationWatts / Math.max(1, cpu.tdpWatts);
-  const thermal = ratio >= 1.3 ? 1 : ratio >= 1 ? 0.92 + 0.08 * ((ratio - 1) / 0.3) : Math.max(0.75, 0.92 * ratio);
+// ---- scoring (mirror of src/rules/benchmark.ts — see SCORING.md) -------------
+const PERF_REF = 7000, VAL_REF = 0.43, EFF_REF = 1.10;
+const W = { performance: 0.34, value: 0.18, efficiency: 0.16, thermal: 0.12, reliability: 0.10, scalability: 0.10 };
 
-  const cpuScore = Math.round(cpu.benchBase * cpu.cores * cpu.boostClock * thermal * 6);
+function score(b: Record<string, Comp>) {
+  const { CPU: cpu, GPU: gpu, RAM: ram, COOLER: cooler, MOBO: mobo, PSU: psu, CASE: pc, STORAGE: st, FANS: fans } = b;
+  const coolRatio = cooler.dissipationWatts / Math.max(1, cpu.tdpWatts);
+  const thermalFactor = coolRatio >= 1.3 ? 1 : coolRatio >= 1 ? 0.92 + 0.08 * ((coolRatio - 1) / 0.3) : Math.max(0.75, 0.92 * coolRatio);
+  const cpuScore = Math.round(cpu.benchBase * cpu.cores * cpu.boostClock * thermalFactor * 6);
   const gpuScore = Math.round(gpu.benchBase * (gpu.vramGb / 8 + 1) * (1 + gpu.benchBase / 100) * 40);
   const r = cpuScore === 0 ? 1 : gpuScore / cpuScore;
   const synergy = r > 3 ? 0.9 : r < 0.4 ? 0.92 : 1 + 0.1 * (1 - Math.min(1, Math.abs(r - 1.5) / 1.5));
   const memFactor = Math.min(1.15, 0.9 + (ram.speedMhz - 3200) / 20000) * Math.min(1.1, 0.95 + ram.capacityGb / 256);
-  const finalScore = Math.round((cpuScore + gpuScore) * synergy * memFactor);
+  const performanceIndex = Math.round((cpuScore + gpuScore) * synergy * memFactor);
 
-  const totalWatts = REQUIRED.reduce((s, c) => s + (b[c].tdpWatts ?? 0), 0);
-  const totalPrice = REQUIRED.reduce((s, c) => s + (b[c].priceUsd ?? 0), 0);
-  const coolingScore = Math.min(100, Math.round((cooler.dissipationWatts / Math.max(1, cpu.tdpWatts)) * 70));
-  const valueScore = Math.round((finalScore / Math.max(1, totalPrice)) * 100);
-  const throughputScore = Math.round((ram.speedMhz * ram.modules) / 100 + cpu.threads * 45 + gpu.vramGb * 25);
+  const totalWatts = draw(b);
+  const totalPrice = Object.values(b).reduce((s, c) => s + (c.priceUsd ?? 0), 0);
+
+  const performance = clampN((performanceIndex / PERF_REF) * 100);
+  const value = clampN((Math.pow(performanceIndex, 0.8) / totalPrice / VAL_REF) * 100);
+  const efficiency = clampN((Math.pow(performanceIndex, 0.75) / totalWatts / EFF_REF) * 100);
+  const airflow = pc.includedFans + (fans?.count ?? 0);
+  const thermal = clampN((coolRatio / 1.6) * 85 + Math.min(15, airflow * 2.5));
+  const psuEff = clampN(((psu.efficiencyPct - 80) / 14) * 100);
+  const psuLoad = clampN(((psu.wattage - totalWatts) / psu.wattage / 0.5) * 100);
+  const thermHead = clampN(((coolRatio - 1) / 0.6) * 100);
+  const quiet = clampN(((40 - cooler.noiseDb) / 16) * 100);
+  const reliability = clampN(0.3 * psuEff + 0.3 * thermHead + 0.25 * psuLoad + 0.15 * quiet);
+  const freeRam = clampN(((mobo.memorySlots - ram.modules) / mobo.memorySlots) * 100);
+  const freeM2 = clampN(((mobo.m2Slots - (st.iface === 'NVMe' ? 1 : 0)) / mobo.m2Slots) * 100);
+  const psuHead = clampN(((psu.wattage / Math.max(1, totalWatts) - 1) / 0.8) * 100);
+  const gpuClear = clampN(((pc.maxGpuLengthMm - gpu.dimensions.length) / pc.maxGpuLengthMm) * 200);
+  const fanRoom = clampN((pc.fanMounts / 10) * 100);
+  const scalability = clampN(0.25 * freeRam + 0.2 * freeM2 + 0.25 * psuHead + 0.15 * gpuClear + 0.15 * fanRoom);
+
+  const composite = W.performance * performance + W.value * value + W.efficiency * efficiency +
+    W.thermal * thermal + W.reliability * reliability + W.scalability * scalability;
+  const finalScore = Math.round(composite * 100);
 
   return {
-    cpuScore, gpuScore, thermalFactor: +thermal.toFixed(3), synergyFactor: +synergy.toFixed(3),
-    memoryFactor: +memFactor.toFixed(3), finalScore, coolingScore, valueScore, throughputScore,
-    totalWatts, totalPrice,
+    cpuScore, gpuScore, performanceIndex,
+    perfPerWatt: +(performanceIndex / totalWatts).toFixed(1), perfPerDollar: +(performanceIndex / totalPrice).toFixed(2),
+    totalWatts, totalPrice, synergyFactor: +synergy.toFixed(3), memoryFactor: +memFactor.toFixed(3), thermalFactor: +thermalFactor.toFixed(3),
+    performance: Math.round(performance), value: Math.round(value), efficiency: Math.round(efficiency),
+    thermal: Math.round(thermal), reliability: Math.round(reliability), scalability: Math.round(scalability),
+    finalScore,
   };
 }
 

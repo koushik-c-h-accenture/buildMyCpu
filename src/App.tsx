@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import Builder from './pages/Builder';
 import Leaderboard from './pages/Leaderboard';
+import Scoring from './pages/Scoring';
 
 // HashRouter keeps routing entirely client-side, which is required for
 // GitHub Pages (no server to rewrite unknown paths).
@@ -10,6 +11,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Builder />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/scoring" element={<Scoring />} />
       </Routes>
     </HashRouter>
   );
