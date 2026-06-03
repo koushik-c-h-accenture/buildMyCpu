@@ -26,6 +26,44 @@ export interface ScoreBreakdown {
   finalScore: number;
 }
 
+export interface StressReport {
+  cpuTempC: number;
+  gpuTempC: number;
+  baseClockGhz: number;
+  effectiveClockGhz: number;
+  throttling: boolean;
+  fpsIndex: number;
+  powerDrawW: number;
+  airflowFans: number;
+}
+
+/**
+ * Simulates a sustained CPU+GPU load test and reports the steady-state thermals,
+ * effective clock (after any throttling), and power draw. Deterministic.
+ */
+export function stressReport(b: Build): StressReport {
+  const cpu = b.CPU as Cpu, gpu = b.GPU as Gpu, cooler = b.COOLER as Cooler;
+  const pcCase = b.CASE as Case, fans = b.FANS as Fans | undefined;
+  const airflowFans = pcCase.includedFans + (fans?.count ?? 0);
+
+  const coolRatio = cooler.dissipationWatts / Math.max(1, cpu.tdpWatts);
+  const thermalFactor = coolRatio >= 1.3 ? 1 : coolRatio >= 1 ? 0.92 + 0.08 * ((coolRatio - 1) / 0.3) : Math.max(0.75, 0.92 * coolRatio);
+  // steady-state CPU temp: hotter when cooler is undersized, cooler with more airflow
+  const cpuTempC = Math.round(Math.min(105, 38 + (cpu.tdpWatts / cooler.dissipationWatts) * 72 - airflowFans * 1.5));
+  const gpuTempC = Math.round(Math.min(92, 58 + (gpu.tdpWatts / 350) * 26 - airflowFans * 1.6));
+  const effectiveClockGhz = Number((cpu.boostClock * thermalFactor).toFixed(2));
+
+  return {
+    cpuTempC, gpuTempC,
+    baseClockGhz: cpu.boostClock,
+    effectiveClockGhz,
+    throttling: thermalFactor < 0.999 || cpuTempC >= 95,
+    fpsIndex: Math.round(gpu.benchBase * (gpu.vramGb / 8 + 1) * 14),
+    powerDrawW: totalSystemDraw(b),
+    airflowFans,
+  };
+}
+
 // ----- tuning constants (documented in SCORING.md) -----
 const PERF_REF = 7000;     // performance index of a top-tier build
 const VAL_REF = 0.43;      // PI^0.8 / price reference

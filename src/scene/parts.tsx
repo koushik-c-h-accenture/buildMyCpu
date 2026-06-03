@@ -70,7 +70,13 @@ export function MoboPart({ c }: { c: Mobo }) {
   const d = c.dimensions.length * S; // 305 -> Z
   return (
     <group>
-      <Box size={[0.07, h, d]} color={c.color} metalness={0.2} roughness={0.7} edges="#0a0a0a" />
+      {/* green PCB for instant recognition */}
+      <Box size={[0.07, h, d]} color="#1c4a39" metalness={0.15} roughness={0.75} edges="#0c1a14" />
+      {/* brand accent stripe */}
+      <mesh position={[-0.04, h * 0.42, 0]}>
+        <boxGeometry args={[0.02, 0.06, d * 0.9]} />
+        <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={0.5} toneMapped={false} />
+      </mesh>
       {/* CPU socket */}
       <mesh position={[-0.06, h * 0.22, -d * 0.12]}>
         <boxGeometry args={[0.05, 0.42, 0.42]} />
@@ -156,7 +162,12 @@ export function PsuPart({ c }: { c: Psu }) {
   const d = c.dimensions.length * S;
   return (
     <group>
-      <Box size={[w, h, d]} color={c.color} metalness={0.5} roughness={0.5} edges="#0a0a0a" />
+      <Box size={[w, h, d]} color="#23232a" metalness={0.55} roughness={0.45} edges="#0a0a0a" />
+      {/* brand label plate (camera-facing -X side) */}
+      <mesh position={[-w / 2 - 0.01, 0, 0]}>
+        <boxGeometry args={[0.02, h * 0.55, d * 0.5]} />
+        <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={0.3} toneMapped={false} />
+      </mesh>
       <group position={[0, h * 0.5 + 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <Fan radius={Math.min(0.6, w * 0.4)} color="#0c0c10" glow="#2f6df0" />
       </group>
@@ -301,22 +312,35 @@ export function Burst() {
   );
 }
 
-/** Translucent airflow streaks moving front-to-back during the load test. */
-export function Airflow({ extent }: { extent: [number, number, number] }) {
+/**
+ * Airflow streaks. Density scales with the number of fans, and the streaks flow
+ * front→back (intake→exhaust) with an upward drift as they pass the CPU/cooler —
+ * picking up heat (cool blue intake → warm orange exhaust).
+ */
+export function Airflow({ extent, fans, speed }: { extent: [number, number, number]; fans: number; speed: number }) {
   const ref = useRef<THREE.Group>(null);
+  const n = Math.max(0, Math.min(20, fans * 2));
   useFrame((_, dt) => {
     if (!ref.current) return;
     ref.current.children.forEach((m) => {
-      m.position.z -= dt * 2.2;
-      if (m.position.z < -extent[2]) m.position.z = extent[2];
+      m.position.z -= dt * speed;
+      m.position.y += dt * speed * 0.12; // rises as it heats up
+      const mat = (m as THREE.Mesh).material as THREE.MeshBasicMaterial;
+      const warmth = THREE.MathUtils.clamp((extent[2] - m.position.z) / (extent[2] * 2), 0, 1);
+      mat.color.setRGB(0.04 + warmth * 0.96, 0.52 - warmth * 0.2, 1 - warmth * 0.8);
+      if (m.position.z < -extent[2]) {
+        m.position.z = extent[2];
+        m.position.x = (Math.random() - 0.5) * extent[0] * 1.2;
+        m.position.y = -extent[1] * 0.6 + Math.random() * extent[1] * 0.6;
+      }
     });
   });
   const streaks = [];
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < n; i++) {
     streaks.push(
-      <mesh key={i} position={[(Math.random() - 0.5) * extent[0] * 1.4, (Math.random() - 0.5) * extent[1] * 1.4, (Math.random() - 0.5) * extent[2] * 2]}>
+      <mesh key={i} position={[(Math.random() - 0.5) * extent[0] * 1.2, -extent[1] * 0.6 + Math.random() * extent[1] * 1.4, (Math.random() - 0.5) * extent[2] * 2]}>
         <planeGeometry args={[0.05, 0.6]} />
-        <meshBasicMaterial color="#0a86ff" transparent opacity={0.5} side={THREE.DoubleSide} toneMapped={false} />
+        <meshBasicMaterial color="#0a86ff" transparent opacity={0.55} side={THREE.DoubleSide} toneMapped={false} />
       </mesh>,
     );
   }
@@ -331,18 +355,18 @@ export function CaseShell({ c }: { c: Case }) {
     <group>
       <mesh>
         <boxGeometry args={[w, h, d]} />
-        <meshStandardMaterial color={c.color} transparent opacity={0.05} side={THREE.BackSide} />
-        <Edges color="#3a3f4a" />
+        <meshStandardMaterial color="#aeb6c4" transparent opacity={0.05} side={THREE.BackSide} />
+        <Edges color="#7b8290" />
       </mesh>
-      {/* solid back panel (motherboard tray side) */}
+      {/* back panel (motherboard tray side) — medium grey backdrop for contrast */}
       <mesh position={[w / 2 - 0.02, 0, 0]}>
         <boxGeometry args={[0.04, h * 0.98, d * 0.98]} />
-        <meshStandardMaterial color="#16161c" metalness={0.3} roughness={0.7} />
+        <meshStandardMaterial color="#3b414c" metalness={0.2} roughness={0.85} />
       </mesh>
-      {/* bottom */}
+      {/* bottom PSU shroud */}
       <mesh position={[0, -h / 2 + 0.02, 0]}>
         <boxGeometry args={[w * 0.98, 0.04, d * 0.98]} />
-        <meshStandardMaterial color="#16161c" metalness={0.3} roughness={0.7} />
+        <meshStandardMaterial color="#2f343d" metalness={0.2} roughness={0.85} />
       </mesh>
     </group>
   );

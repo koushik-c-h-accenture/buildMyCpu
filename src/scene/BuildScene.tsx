@@ -37,6 +37,10 @@ function Rig({ build }: { build: Build }) {
   const airHX = cooler ? cooler.dimensions.height * S : 0;
   const failed = phase === 'failed';
   const loading = phase === 'testing' || phase === 'done';
+  // airflow is driven by the fans actually present (case + extra + cooler fans)
+  const coolerFans = cooler ? (isAir ? 1 : Math.round(cooler.radiatorSizeMm / 120)) : 0;
+  const fanCount = pcCase.includedFans + ((build.FANS as any)?.count ?? 0) + coolerFans;
+  const airflowSpeed = phase === 'testing' ? 3.2 : 1.6;
 
   return (
     <group>
@@ -57,7 +61,7 @@ function Rig({ build }: { build: Build }) {
       )}
 
       {failed && <Burst />}
-      {loading && <Airflow extent={[hx, hy, hz]} />}
+      {loading && fanCount > 0 && <Airflow extent={[hx, hy, hz]} fans={fanCount} speed={airflowSpeed} />}
       {loading && <pointLight position={[boardX - 0.4, -0.4, 0.1]} color="#ff7a3c" intensity={1.6} distance={5} />}
     </group>
   );
