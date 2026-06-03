@@ -121,8 +121,18 @@ code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.ai-box {
-  margin-top: 10px; background: var(--panel2); border: 1px solid var(--accent);
-  border-radius: 8px; padding: 11px 12px; font-size: 12.5px; line-height: 1.5;
-  white-space: pre-wrap; color: var(--text);
-}
+.subscores { display: flex; flex-direction: column; gap: 9px; margin: 16px 0; }
+.subscore-top { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+.subscore-top span { color: var(--muted); }
+.subscore-top b { color: var(--text); }
+.bar { height: 7px; background: var(--panel2); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--accent)); border-radius: 4px; transition: width 0.6s ease; }
+
+/* scoring methodology page */
+.doc { max-width: 860px; margin: 0 auto; padding: 24px; line-height: 1.6; }
+.doc h2 { margin-top: 28px; }
+.doc table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+.doc th, .doc td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.doc th { color: var(--muted); }
+.doc code { background: var(--panel2); padding: 1px 6px; border-radius: 4px; }
+.doc .formula { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-family: ui-monospace, monospace; font-size: 13px; white-space: pre-wrap; }

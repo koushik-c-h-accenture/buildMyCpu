@@ -43,17 +43,30 @@ and compete on a global leaderboard (no login required).
   Until done, the simulator works fully but the leaderboard shows a "backend not
   ready" notice.
 
+## Scoring & categories (current)
+- 9 categories: CASE, MOBO, CPU, COOLER, RAM, GPU, STORAGE, PSU (required) + FANS (optional).
+  Defined in `src/lib/types.ts` (`REQUIRED_CATEGORIES` / `OPTIONAL_CATEGORIES`).
+- **Competition Score 0–10,000** = weighted blend of 6 sub-scores (Performance, Value,
+  Efficiency, Thermal, Reliability, Scalability). Full methodology in `SCORING.md` and the
+  in-app `/scoring` page (`src/pages/Scoring.tsx`). Logic in `src/rules/benchmark.ts`.
+- Edge function `submit-build` is **in sync**: it imports `catalog.json` (generated from
+  `src/data/catalog.ts`) and re-implements the same validate + multi-factor score.
+  Regenerate `catalog.json` whenever the catalog changes (tsx one-liner).
+- "Power On & Test": compatible → load test (airflow streaks + heat light); incompatible →
+  `Burst` (red flash + particle explosion) + error list. Phase machine in `buildStore.ts`.
+
+## Backend deploy status (BLOCKER for submit)
+- `builds` table + `submit-build` function are NOT yet deployed → leaderboard submit fails
+  with "fetch failed". Needs a Supabase **access token** (publishable key can't create
+  tables / deploy functions). Supabase CLI not installed locally.
+
 ## Known TODO / future
-- **Edge Function is out of sync with the catalog/scoring.** `submit-build`'s
-  `SPECS` map and scoring formula still reflect the original small catalog and
-  single-factor score. Before the leaderboard submit works it must be regenerated
-  from `src/data/catalog.ts` + `src/rules/benchmark.ts` (new multi-factor model).
-- AI build analysis (Claude API via Edge Function with ANTHROPIC_API_KEY secret) — planned.
-- Claude Artifact single-file build (sandbox likely blocks Supabase → local leaderboard only) — planned.
-- Real GLB models + drag/snap assembly + cable routing (currently detailed
-  procedural meshes at real dimensions with anchored placement).
-- Move catalog into a Supabase table to remove the function/catalog duplication.
-- Code-split the ~1.28MB bundle (Three.js).
+- AI build analysis (Claude API) — DEFERRED: user has no Anthropic API key. Code exists
+  (`supabase/functions/analyze-build`, `src/lib/analyze.ts`) but is unwired/undeployed.
+- Claude Artifact single-file build (sandbox likely blocks Supabase → local leaderboard only).
+- buildmypc.in-style: product-card picker, save/share build URL, live PSU wattage meter.
+- Real GLB models / product images (currently detailed procedural meshes).
+- Code-split the ~1.29MB bundle (Three.js).
 
 ## 3D scene notes
 - `src/scene/parts.tsx` = procedural part meshes (Fan, Mobo, Cpu, Ram, Gpu, Psu,

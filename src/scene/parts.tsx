@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Edges } from '@react-three/drei';
 import * as THREE from 'three';
 import { useBuildStore } from '../store/buildStore';
-import type { Case, Cooler, Cpu, Gpu, Mobo, Psu, Ram } from '../lib/types';
+import type { Case, Cooler, Cpu, Gpu, Mobo, Psu, Ram, Storage, Fans } from '../lib/types';
 
 const S = 1 / 100; // mm -> scene units
 
@@ -226,6 +226,91 @@ export function RadiatorPart({ c }: { c: Cooler }) {
       {fans}
     </group>
   );
+}
+
+export function StoragePart({ c }: { c: Storage }) {
+  const len = c.dimensions.length * S;
+  const wid = c.dimensions.width * S;
+  return (
+    <group>
+      <Box size={[0.04, wid, len]} color={c.color} metalness={0.6} roughness={0.4} edges="#0a0a0a" />
+      <mesh position={[-0.03, 0, 0]}>
+        <boxGeometry args={[0.02, wid * 0.7, len * 0.5]} />
+        <meshStandardMaterial color="#0a0a0e" />
+      </mesh>
+    </group>
+  );
+}
+
+export function FansPart({ c }: { c: Fans }) {
+  const n = Math.min(3, c.count);
+  const fans = [];
+  for (let i = 0; i < n; i++) {
+    fans.push(
+      <group key={i} position={[0, (i - (n - 1) / 2) * 1.05, 0]}>
+        <Fan radius={0.48} color={c.color} />
+      </group>,
+    );
+  }
+  return <group>{fans}</group>;
+}
+
+/** Expanding particle burst + red flash, shown when an incompatible build is powered on. */
+export function Burst() {
+  const ref = useRef<THREE.Group>(null);
+  const light = useRef<THREE.PointLight>(null);
+  const t = useRef(0);
+  const dirs = useRef(
+    Array.from({ length: 36 }, () => new THREE.Vector3(Math.random() * 2 - 1, Math.random() * 2 - 1, Math.random() * 2 - 1).normalize()),
+  );
+  useFrame((_, dt) => {
+    t.current = (t.current + dt) % 1.6;
+    const e = t.current / 1.6;
+    if (ref.current) {
+      ref.current.children.forEach((m, i) => {
+        const d = dirs.current[i];
+        const r = e * 3.2;
+        m.position.set(d.x * r, d.y * r, d.z * r);
+        m.scale.setScalar(Math.max(0.01, 1 - e));
+      });
+    }
+    if (light.current) light.current.intensity = Math.max(0, 6 * (1 - e * 1.5));
+  });
+  return (
+    <group>
+      <pointLight ref={light} color="#ff3b3b" position={[0, 0.4, 0]} intensity={6} distance={12} />
+      <group ref={ref}>
+        {dirs.current.map((_, i) => (
+          <mesh key={i}>
+            <sphereGeometry args={[0.09, 8, 8]} />
+            <meshStandardMaterial color="#ff5a3c" emissive="#ff3b1e" emissiveIntensity={2} />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+/** Translucent airflow streaks moving front-to-back during the load test. */
+export function Airflow({ extent }: { extent: [number, number, number] }) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame((_, dt) => {
+    if (!ref.current) return;
+    ref.current.children.forEach((m) => {
+      m.position.z -= dt * 2.2;
+      if (m.position.z < -extent[2]) m.position.z = extent[2];
+    });
+  });
+  const streaks = [];
+  for (let i = 0; i < 10; i++) {
+    streaks.push(
+      <mesh key={i} position={[(Math.random() - 0.5) * extent[0] * 1.4, (Math.random() - 0.5) * extent[1] * 1.4, (Math.random() - 0.5) * extent[2] * 2]}>
+        <planeGeometry args={[0.04, 0.5]} />
+        <meshBasicMaterial color="#6cd0ff" transparent opacity={0.3} side={THREE.DoubleSide} />
+      </mesh>,
+    );
+  }
+  return <group ref={ref}>{streaks}</group>;
 }
 
 export function CaseShell({ c }: { c: Case }) {
