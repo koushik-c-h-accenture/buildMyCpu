@@ -1,12 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createCompetition, getCompetition } from '../lib/competition';
 import { useCompStore } from '../store/compStore';
+import { supabase } from '../lib/supabase';
+import { SUPABASE_URL } from '../config';
+
+const PROJECT_REF = SUPABASE_URL.match(/https:\/\/([^.]+)/)?.[1] ?? '';
+const SQL_EDITOR = `https://supabase.com/dashboard/project/${PROJECT_REF}/sql/new`;
 
 export default function Home() {
   const nav = useNavigate();
   const { setSession, clear } = useCompStore();
   const [tab, setTab] = useState<'join' | 'host'>('join');
+  const [setupOk, setSetupOk] = useState<boolean | null>(null);
+  useEffect(() => {
+    supabase.from('competitions').select('game_id', { count: 'exact', head: true })
+      .then(({ error }) => setSetupOk(!error));
+  }, []);
 
   // join
   const [gameId, setGameId] = useState('');
@@ -44,6 +54,14 @@ export default function Home() {
       </header>
 
       <div className="home">
+        {setupOk === false && (
+          <div className="notice" style={{ marginBottom: 16, borderColor: 'var(--red)' }}>
+            <strong>⚠️ One-time database setup required</strong>
+            <p className="muted small">Hosting, joining, and the leaderboard need two Supabase tables that
+              don't exist yet. Open the SQL editor, paste the setup SQL from <code>supabase/migrations/0002_competitions.sql</code>, and click Run.</p>
+            <a className="btn primary" href={SQL_EDITOR} target="_blank" rel="noreferrer">Open Supabase SQL Editor →</a>
+          </div>
+        )}
         <div className="home-tabs">
           <button className={`tab ${tab === 'join' ? 'active' : ''}`} onClick={() => setTab('join')}>Join a Competition</button>
           <button className={`tab ${tab === 'host' ? 'active' : ''}`} onClick={() => setTab('host')}>Host a Competition</button>
