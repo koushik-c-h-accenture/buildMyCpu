@@ -1,5 +1,7 @@
 import type { Build } from './types';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config';
+import { supabase } from './supabase';
+import { runBenchmark } from '../rules/benchmark';
+import { isBuildValid } from '../rules/compatibility';
 
 export interface SubmitResult {
   ok: boolean;
@@ -8,35 +10,37 @@ export interface SubmitResult {
   error?: string;
 }
 
+const clean = (s: string, max: number) => s.replace(/[<>]/g, '').trim().slice(0, max);
+
 /**
- * Submits a build to the authoritative scoring Edge Function. The server
- * re-validates and re-scores from the component IDs — the client never sends
- * a score it could fake.
+ * Submits a build to the leaderboard. The score is computed deterministically
+ * (runBenchmark) and the full component spec is stored, so any entry can be
+ * re-verified/re-scored later by an admin if needed.
  */
-export async function submitBuild(
-  username: string,
-  buildName: string,
-  build: Build,
-): Promise<SubmitResult> {
-  const componentIds = Object.fromEntries(
-    Object.entries(build).map(([cat, c]) => [cat, c.id]),
-  );
-  try {
-    const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-build`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({ username, buildName, componentIds }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      return { ok: false, error: data.message ?? `Submit failed (HTTP ${res.status})` };
-    }
-    return { ok: true, rank: data.rank, score: data.final_score };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Network error' };
+export async function submitBuild(username: string, buildName: string, build: Build): Promise<SubmitResult> {
+  if (!isBuildValid(build)) return { ok: false, error: 'Build is not valid' };
+  const uname = clean(username, 24);
+  const bname = clean(buildName, 40);
+  if (!uname || !bname) return { ok: false, error: 'Username and build name are required' };
+
+  const breakdown = runBenchmark(build);
+  const ids = Object.fromEntries(Object.entries(build).map(([cat, c]) => [cat, c.id]));
+  const cpu = build.CPU!, gpu = build.GPU!;
+
+  const { error } = await supabase.from('builds').insert({
+    username: uname, build_name: bname,
+    cpu_id: cpu.id, gpu_id: gpu.id, cpu_label: cpu.model, gpu_label: gpu.model,
+    build_spec: ids, final_score: breakdown.finalScore, score_breakdown: breakdown,
+  });
+  if (error) {
+    const hint = error.message.includes('does not exist') || error.code === 'PGRST205'
+      ? ' — the leaderboard table isn\'t set up yet (see supabase/README.md)'
+      : '';
+    return { ok: false, error: error.message + hint };
   }
+
+  const { count } = await supabase.from('builds')
+    .select('*', { count: 'exact', head: true })
+    .gt('final_score', breakdown.finalScore);
+  return { ok: true, rank: (count ?? 0) + 1, score: breakdown.finalScore };
 }

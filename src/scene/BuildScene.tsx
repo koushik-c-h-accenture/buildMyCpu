@@ -66,16 +66,16 @@ function Rig({ build }: { build: Build }) {
 export default function BuildScene({ build }: { build: Build }) {
   const hasCase = !!build.CASE;
   return (
-    <Canvas shadows camera={{ position: [-5.5, 3.2, 5.5], fov: 42 }} style={{ background: '#0d0d14' }}>
-      <ambientLight intensity={0.7} />
-      <directionalLight position={[-6, 8, 6]} intensity={1.4} castShadow shadow-mapSize={[1024, 1024]} />
-      <directionalLight position={[4, 4, -3]} intensity={0.5} color="#6c8efe" />
-      <pointLight position={[-3, 1, 4]} intensity={0.8} color="#f38ba8" />
+    <Canvas shadows camera={{ position: [-5.5, 3.2, 5.5], fov: 42 }} style={{ background: '#eae8e2' }}>
+      <ambientLight intensity={1.0} />
+      <directionalLight position={[-6, 8, 6]} intensity={1.5} castShadow shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[4, 4, -3]} intensity={0.6} color="#6c8efe" />
+      <pointLight position={[-3, 1, 4]} intensity={0.7} color="#f38ba8" />
 
       <Rig build={build} />
 
-      {hasCase && <ContactShadows position={[0, -2.4, 0]} opacity={0.5} scale={14} blur={2.5} far={5} />}
-      <gridHelper args={[16, 16, '#262636', '#16161e']} position={[0, -2.42, 0]} />
+      {hasCase && <ContactShadows position={[0, -2.4, 0]} opacity={0.35} scale={14} blur={2.5} far={5} />}
+      <gridHelper args={[16, 16, '#c9c2b3', '#dcd6c8']} position={[0, -2.42, 0]} />
 
       {!hasCase && (
         <Html center>
