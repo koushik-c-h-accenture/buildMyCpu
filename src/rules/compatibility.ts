@@ -39,43 +39,43 @@ export function validateBuild(b: Build): RuleResult[] {
 
   if (cpu && mobo) {
     add(cpu.socket === mobo.socket, 'SOCKET_MISMATCH',
-      `CPU socket ${cpu.socket} vs motherboard ${mobo.socket}`);
+      `CPU is ${cpu.socket} but the motherboard socket is ${mobo.socket} — they don't fit`);
   }
   if (ram && mobo) {
     add(ram.memoryType === mobo.memoryType, 'RAM_TYPE',
-      `${ram.memoryType} RAM vs ${mobo.memoryType} motherboard`);
+      `Motherboard supports ${mobo.memoryType} but you selected ${ram.memoryType} memory`);
     add(ram.modules <= mobo.memorySlots, 'RAM_SLOTS',
-      `${ram.modules} modules need ${ram.modules} slots; board has ${mobo.memorySlots}`);
+      `RAM has ${ram.modules} modules but the motherboard only has ${mobo.memorySlots} slots`);
   }
   if (cpu && ram) {
     add(cpu.memoryType === ram.memoryType, 'CPU_RAM_TYPE',
-      `CPU supports ${cpu.memoryType}, RAM is ${ram.memoryType}`);
+      `CPU's memory controller is ${cpu.memoryType} but the RAM is ${ram.memoryType}`);
   }
   if (mobo && pcCase) {
     add(pcCase.formFactorsSupported.includes(mobo.formFactor), 'MOBO_FIT',
-      `${mobo.formFactor} board not supported by this case`);
+      `${mobo.formFactor} motherboard doesn't fit in the ${pcCase.brand} ${pcCase.model}`);
   }
   if (gpu && pcCase) {
     add(gpu.dimensions.length <= pcCase.maxGpuLengthMm, 'GPU_LENGTH',
-      `GPU is ${gpu.dimensions.length}mm; case fits ${pcCase.maxGpuLengthMm}mm`);
+      `GPU is ${gpu.dimensions.length}mm long but the case only clears ${pcCase.maxGpuLengthMm}mm`);
   }
   if (cooler && cpu) {
     add(cooler.supportedSockets.includes(cpu.socket), 'COOLER_SOCKET',
-      `Cooler doesn't support socket ${cpu.socket}`);
+      `Cooler has no mounting bracket for the ${cpu.socket} socket`);
   }
   if (cooler && pcCase) {
     if (cooler.coolerType === 'Air') {
       add(cooler.airHeightMm <= pcCase.maxCoolerHeightMm, 'COOLER_HEIGHT',
-        `Air cooler ${cooler.airHeightMm}mm exceeds case max ${pcCase.maxCoolerHeightMm}mm`);
+        `Air cooler is ${cooler.airHeightMm}mm tall but the case clearance is ${pcCase.maxCoolerHeightMm}mm`);
     } else {
       add(pcCase.radiatorSupportMm.includes(cooler.radiatorSizeMm), 'RADIATOR_FIT',
-        `${cooler.radiatorSizeMm}mm radiator not supported by this case`);
+        `${cooler.radiatorSizeMm}mm radiator can't be mounted in the ${pcCase.brand} ${pcCase.model}`);
     }
   }
   if (psu) {
     const draw = totalSystemDraw(b);
     add(psu.wattage >= draw * 1.25, 'PSU_WATTAGE',
-      `PSU ${psu.wattage}W vs recommended ${Math.ceil(draw * 1.25)}W (25% headroom)`);
+      `PSU is ${psu.wattage}W but this build needs ~${Math.ceil(draw * 1.25)}W including headroom`);
   }
 
   return results;

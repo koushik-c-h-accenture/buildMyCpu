@@ -44,7 +44,22 @@ and compete on a global leaderboard (no login required).
   ready" notice.
 
 ## Known TODO / future
-- Real GLB models + drag/snap assembly + cable routing (currently parametric
-  boxes at real dimensions with fixed slots).
+- **Edge Function is out of sync with the catalog/scoring.** `submit-build`'s
+  `SPECS` map and scoring formula still reflect the original small catalog and
+  single-factor score. Before the leaderboard submit works it must be regenerated
+  from `src/data/catalog.ts` + `src/rules/benchmark.ts` (new multi-factor model).
+- AI build analysis (Claude API via Edge Function with ANTHROPIC_API_KEY secret) — planned.
+- Claude Artifact single-file build (sandbox likely blocks Supabase → local leaderboard only) — planned.
+- Real GLB models + drag/snap assembly + cable routing (currently detailed
+  procedural meshes at real dimensions with anchored placement).
 - Move catalog into a Supabase table to remove the function/catalog duplication.
-- Code-split the 1.25MB bundle (Three.js).
+- Code-split the ~1.28MB bundle (Three.js).
+
+## 3D scene notes
+- `src/scene/parts.tsx` = procedural part meshes (Fan, Mobo, Cpu, Ram, Gpu, Psu,
+  Cooler air/AIO, Radiator, CaseShell). `S = 1/100` (mm→units).
+- `src/scene/BuildScene.tsx` = layout/placement anchored to case interior bounds
+  (motherboard tray on +X; camera views the open −X side), `Drop` entrance
+  animation, fan spin tied to `phase` ('testing' = fast). Validation is deferred:
+  no hints while building; full check fires on "Test & Benchmark" (phase machine
+  in `src/store/buildStore.ts`: building → testing → done | failed).

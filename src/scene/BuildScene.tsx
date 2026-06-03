@@ -1,75 +1,105 @@
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Edges, Html } from '@react-three/drei';
-import type { Build, Category, Component } from '../lib/types';
+import { useRef, type ReactNode } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
+import * as THREE from 'three';
+import type { Build, Case, Cooler } from '../lib/types';
+import {
+  CaseShell, MoboPart, CpuPart, RamPart, GpuPart, PsuPart, CoolerPart, RadiatorPart, S,
+} from './parts';
 
-// Render scale: millimetres -> scene units (1 unit = 100mm).
-const S = 1 / 100;
+/** Slides a part down into place when it first mounts (easeOutCubic). */
+function Drop({ to, children }: { to: [number, number, number]; children: ReactNode }) {
+  const ref = useRef<THREE.Group>(null);
+  const t = useRef(0);
+  useFrame((_, dt) => {
+    if (!ref.current) return;
+    t.current = Math.min(1, t.current + dt * 2.6);
+    const e = 1 - Math.pow(1 - t.current, 3);
+    ref.current.position.set(to[0], to[1] + (1 - e) * 2.5, to[2]);
+    ref.current.scale.setScalar(0.85 + 0.15 * e);
+  });
+  return <group ref={ref}>{children}</group>;
+}
 
-// Fixed placement slots inside the case (in scene units), roughly anatomical.
-const SLOTS: Record<Category, [number, number, number]> = {
-  CASE: [0, 0, 0],
-  MOBO: [-0.6, 0.3, -0.9],
-  CPU: [-0.6, 1.1, -0.85],
-  COOLER: [-0.6, 1.5, -0.7],
-  RAM: [0.4, 1.0, -0.85],
-  GPU: [-0.2, -0.2, -0.5],
-  PSU: [-0.9, -1.4, -0.4],
-};
+function Rig({ build }: { build: Build }) {
+  const pcCase = build.CASE as Case | undefined;
+  if (!pcCase) return null;
 
-function Part({ component, position }: { component: Component; position: [number, number, number] }) {
-  const { length, width, height } = component.dimensions;
+  const w = pcCase.dimensions.width * S;
+  const h = pcCase.dimensions.height * S;
+  const d = pcCase.dimensions.length * S;
+  const hx = w / 2, hy = h / 2, hz = d / 2;
+  const boardX = hx - 0.3;
+  const cpuX = boardX - 0.12;
+  const cooler = build.COOLER as Cooler | undefined;
+  const isAir = cooler?.coolerType === 'Air';
+  const airHX = cooler ? cooler.dimensions.height * S : 0;
+
   return (
-    <mesh position={position}>
-      <boxGeometry args={[length * S, height * S, width * S]} />
-      <meshStandardMaterial color={component.color} metalness={0.3} roughness={0.6} />
-      <Edges color="#000000" />
-      <Html position={[0, height * S / 2 + 0.15, 0]} center distanceFactor={10}>
-        <div style={{
-          fontSize: 10, color: '#cdd6f4', background: 'rgba(20,20,28,0.8)',
-          padding: '1px 5px', borderRadius: 4, whiteSpace: 'nowrap',
-          pointerEvents: 'none', fontFamily: 'system-ui',
-        }}>{component.model}</div>
-      </Html>
-    </mesh>
+    <group>
+      <CaseShell c={pcCase} />
+
+      {build.MOBO && (
+        <Drop to={[boardX, 0.05, 0]}><MoboPart c={build.MOBO as any} /></Drop>
+      )}
+      {build.CPU && (
+        <Drop to={[cpuX, 0.55, -0.35]}><CpuPart c={build.CPU as any} /></Drop>
+      )}
+      {build.RAM && (
+        <Drop to={[boardX - 0.18, 0.62, 0.12]}><RamPart c={build.RAM as any} /></Drop>
+      )}
+      {build.GPU && (
+        <Drop to={[boardX - 0.45, -0.55, 0.1]}><GpuPart c={build.GPU as any} /></Drop>
+      )}
+      {build.PSU && (
+        <Drop to={[0, -hy + 0.45, -hz + 0.85]}><PsuPart c={build.PSU as any} /></Drop>
+      )}
+      {cooler && isAir && (
+        <Drop to={[cpuX - airHX * 0.45, 0.55, -0.35]}><CoolerPart c={cooler} /></Drop>
+      )}
+      {cooler && !isAir && (
+        <>
+          <Drop to={[cpuX, 0.55, -0.35]}><CoolerPart c={cooler} /></Drop>
+          <Drop to={[0, hy - 0.28, 0]}><RadiatorPart c={cooler} /></Drop>
+        </>
+      )}
+    </group>
   );
 }
 
-function CaseShell({ pcCase }: { pcCase: Component }) {
-  const { length, width, height } = pcCase.dimensions;
+function Controls() {
   return (
-    <mesh position={[0, 0, 0]}>
-      <boxGeometry args={[width * S, height * S, length * S]} />
-      <meshStandardMaterial color={pcCase.color} transparent opacity={0.12} />
-      <Edges color="#7f849c" />
-    </mesh>
+    <OrbitControls enablePan enableZoom enableDamping dampingFactor={0.08}
+      minDistance={3} maxDistance={22} target={[0, 0, 0]} />
   );
 }
 
 export default function BuildScene({ build }: { build: Build }) {
-  const pcCase = build.CASE;
+  const hasCase = !!build.CASE;
   return (
-    <Canvas camera={{ position: [4, 3, 5], fov: 45 }} style={{ background: '#11111b' }}>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[5, 8, 5]} intensity={1.1} castShadow />
-      <directionalLight position={[-5, 3, -5]} intensity={0.4} />
+    <Canvas shadows camera={{ position: [-5.5, 3.2, 5.5], fov: 42 }} style={{ background: '#0d0d14' }}>
+      <ambientLight intensity={0.7} />
+      <directionalLight position={[-6, 8, 6]} intensity={1.4} castShadow
+        shadow-mapSize={[1024, 1024]} />
+      <directionalLight position={[4, 4, -3]} intensity={0.5} color="#6c8efe" />
+      <pointLight position={[-3, 1, 4]} intensity={0.8} color="#f38ba8" />
 
-      {pcCase && <CaseShell pcCase={pcCase} />}
-      {(Object.keys(build) as Category[])
-        .filter((cat) => cat !== 'CASE' && build[cat])
-        .map((cat) => (
-          <Part key={cat} component={build[cat]!} position={SLOTS[cat]} />
-        ))}
+      <Rig build={build} />
 
-      {!pcCase && (
+      {hasCase && (
+        <ContactShadows position={[0, -2.4, 0]} opacity={0.5} scale={14} blur={2.5} far={5} />
+      )}
+      <gridHelper args={[16, 16, '#262636', '#16161e']} position={[0, -2.42, 0]} />
+
+      {!hasCase && (
         <Html center>
-          <div style={{ color: '#6c7086', fontFamily: 'system-ui', fontSize: 14 }}>
+          <div style={{ color: '#6c7086', fontFamily: 'system-ui', fontSize: 14, whiteSpace: 'nowrap' }}>
             Select a case to begin →
           </div>
         </Html>
       )}
 
-      <gridHelper args={[12, 12, '#313244', '#1e1e2e']} position={[0, -2.3, 0]} />
-      <OrbitControls enablePan enableZoom enableRotate minDistance={2} maxDistance={20} />
+      <Controls />
     </Canvas>
   );
 }

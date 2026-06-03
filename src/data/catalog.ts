@@ -1,172 +1,78 @@
 import type { Component } from '../lib/types';
 
-// Real-world component library. Dimensions in mm, TDP in watts.
-// Extend freely — the UI, validation and benchmark are all data-driven.
+// Real-world component library. Dimensions in mm, TDP in watts, prices in USD
+// (approximate street prices, 2024-2025). Extend freely — UI, validation,
+// 3D rendering and scoring are all data-driven off this list.
 export const CATALOG: Component[] = [
   // ---------------------------- CASES ----------------------------
-  {
-    id: 'case-lianli-o11d', category: 'CASE', brand: 'Lian Li', model: 'O11 Dynamic',
-    priceUsd: 149, tdpWatts: 0, dimensions: { length: 445, width: 285, height: 446 },
-    color: '#2b2b32', benchBase: 1,
-    formFactorsSupported: ['ATX', 'MicroATX', 'MiniITX', 'EATX'],
-    maxGpuLengthMm: 420, maxCoolerHeightMm: 167, radiatorSupportMm: [240, 360],
-  },
-  {
-    id: 'case-nzxt-h510', category: 'CASE', brand: 'NZXT', model: 'H510',
-    priceUsd: 89, tdpWatts: 0, dimensions: { length: 428, width: 210, height: 460 },
-    color: '#1f1f24', benchBase: 1,
-    formFactorsSupported: ['ATX', 'MicroATX', 'MiniITX'],
-    maxGpuLengthMm: 381, maxCoolerHeightMm: 165, radiatorSupportMm: [240, 280],
-  },
-  {
-    id: 'case-fractal-meshify2', category: 'CASE', brand: 'Fractal', model: 'Meshify 2',
-    priceUsd: 169, tdpWatts: 0, dimensions: { length: 542, width: 240, height: 474 },
-    color: '#33343a', benchBase: 1,
-    formFactorsSupported: ['EATX', 'ATX', 'MicroATX', 'MiniITX'],
-    maxGpuLengthMm: 460, maxCoolerHeightMm: 185, radiatorSupportMm: [240, 280, 360],
-  },
+  { id: 'case-lianli-o11d', category: 'CASE', brand: 'Lian Li', model: 'O11 Dynamic', priceUsd: 149, tdpWatts: 0, dimensions: { length: 445, width: 285, height: 446 }, color: '#2b2b32', benchBase: 1, formFactorsSupported: ['ATX', 'MicroATX', 'MiniITX', 'EATX'], maxGpuLengthMm: 420, maxCoolerHeightMm: 167, radiatorSupportMm: [240, 360] },
+  { id: 'case-lianli-o11evo', category: 'CASE', brand: 'Lian Li', model: 'O11 Dynamic EVO', priceUsd: 169, tdpWatts: 0, dimensions: { length: 465, width: 285, height: 459 }, color: '#34343c', benchBase: 1, formFactorsSupported: ['ATX', 'MicroATX', 'MiniITX', 'EATX'], maxGpuLengthMm: 426, maxCoolerHeightMm: 167, radiatorSupportMm: [240, 360, 420] },
+  { id: 'case-nzxt-h7flow', category: 'CASE', brand: 'NZXT', model: 'H7 Flow', priceUsd: 129, tdpWatts: 0, dimensions: { length: 446, width: 230, height: 480 }, color: '#1f1f24', benchBase: 1, formFactorsSupported: ['ATX', 'MicroATX', 'MiniITX'], maxGpuLengthMm: 400, maxCoolerHeightMm: 185, radiatorSupportMm: [240, 280, 360] },
+  { id: 'case-fractal-meshify2', category: 'CASE', brand: 'Fractal', model: 'Meshify 2', priceUsd: 169, tdpWatts: 0, dimensions: { length: 542, width: 240, height: 474 }, color: '#33343a', benchBase: 1, formFactorsSupported: ['EATX', 'ATX', 'MicroATX', 'MiniITX'], maxGpuLengthMm: 460, maxCoolerHeightMm: 185, radiatorSupportMm: [240, 280, 360] },
+  { id: 'case-corsair-4000d', category: 'CASE', brand: 'Corsair', model: '4000D Airflow', priceUsd: 94, tdpWatts: 0, dimensions: { length: 453, width: 230, height: 466 }, color: '#28282e', benchBase: 1, formFactorsSupported: ['ATX', 'MicroATX', 'MiniITX'], maxGpuLengthMm: 360, maxCoolerHeightMm: 170, radiatorSupportMm: [240, 280, 360] },
+  { id: 'case-nzxt-h510', category: 'CASE', brand: 'NZXT', model: 'H510', priceUsd: 89, tdpWatts: 0, dimensions: { length: 428, width: 210, height: 460 }, color: '#1c1c21', benchBase: 1, formFactorsSupported: ['ATX', 'MicroATX', 'MiniITX'], maxGpuLengthMm: 381, maxCoolerHeightMm: 165, radiatorSupportMm: [240, 280] },
+  { id: 'case-cm-nr200', category: 'CASE', brand: 'Cooler Master', model: 'NR200 (ITX)', priceUsd: 99, tdpWatts: 0, dimensions: { length: 376, width: 185, height: 292 }, color: '#3a3a40', benchBase: 1, formFactorsSupported: ['MiniITX'], maxGpuLengthMm: 330, maxCoolerHeightMm: 155, radiatorSupportMm: [240, 280] },
 
   // ------------------------- MOTHERBOARDS ------------------------
-  {
-    id: 'mobo-asus-z790-e', category: 'MOBO', brand: 'ASUS', model: 'ROG STRIX Z790-E',
-    priceUsd: 449, tdpWatts: 50, dimensions: { length: 305, width: 244, height: 40 },
-    color: '#3a2f4a', benchBase: 1,
-    socket: 'LGA1700', formFactor: 'ATX', memoryType: 'DDR5', memorySlots: 4,
-  },
-  {
-    id: 'mobo-msi-b650-tomahawk', category: 'MOBO', brand: 'MSI', model: 'B650 Tomahawk',
-    priceUsd: 219, tdpWatts: 45, dimensions: { length: 305, width: 244, height: 40 },
-    color: '#4a2f2f', benchBase: 1,
-    socket: 'AM5', formFactor: 'ATX', memoryType: 'DDR5', memorySlots: 4,
-  },
-  {
-    id: 'mobo-gigabyte-b550', category: 'MOBO', brand: 'Gigabyte', model: 'B550 AORUS Elite',
-    priceUsd: 159, tdpWatts: 40, dimensions: { length: 305, width: 244, height: 40 },
-    color: '#2f3a4a', benchBase: 1,
-    socket: 'AM4', formFactor: 'ATX', memoryType: 'DDR4', memorySlots: 4,
-  },
-  {
-    id: 'mobo-asrock-z790m', category: 'MOBO', brand: 'ASRock', model: 'Z790M-ITX',
-    priceUsd: 199, tdpWatts: 40, dimensions: { length: 244, width: 244, height: 40 },
-    color: '#2f4a3a', benchBase: 1,
-    socket: 'LGA1700', formFactor: 'MicroATX', memoryType: 'DDR5', memorySlots: 4,
-  },
+  { id: 'mobo-asus-z790-e', category: 'MOBO', brand: 'ASUS', model: 'ROG STRIX Z790-E', priceUsd: 449, tdpWatts: 50, dimensions: { length: 305, width: 244, height: 40 }, color: '#3a2f4a', benchBase: 1, socket: 'LGA1700', formFactor: 'ATX', memoryType: 'DDR5', memorySlots: 4 },
+  { id: 'mobo-msi-z790-tomahawk', category: 'MOBO', brand: 'MSI', model: 'MAG Z790 Tomahawk', priceUsd: 289, tdpWatts: 48, dimensions: { length: 305, width: 244, height: 40 }, color: '#3f3450', benchBase: 1, socket: 'LGA1700', formFactor: 'ATX', memoryType: 'DDR5', memorySlots: 4 },
+  { id: 'mobo-asus-b760m', category: 'MOBO', brand: 'ASUS', model: 'Prime B760M-A', priceUsd: 139, tdpWatts: 40, dimensions: { length: 244, width: 244, height: 40 }, color: '#34304a', benchBase: 1, socket: 'LGA1700', formFactor: 'MicroATX', memoryType: 'DDR5', memorySlots: 4 },
+  { id: 'mobo-gigabyte-b760-ddr4', category: 'MOBO', brand: 'Gigabyte', model: 'B760 DS3H DDR4', priceUsd: 129, tdpWatts: 38, dimensions: { length: 305, width: 244, height: 40 }, color: '#2f3a4a', benchBase: 1, socket: 'LGA1700', formFactor: 'ATX', memoryType: 'DDR4', memorySlots: 4 },
+  { id: 'mobo-msi-b650-tomahawk', category: 'MOBO', brand: 'MSI', model: 'MAG B650 Tomahawk', priceUsd: 219, tdpWatts: 45, dimensions: { length: 305, width: 244, height: 40 }, color: '#4a2f2f', benchBase: 1, socket: 'AM5', formFactor: 'ATX', memoryType: 'DDR5', memorySlots: 4 },
+  { id: 'mobo-asrock-b650e-itx', category: 'MOBO', brand: 'ASRock', model: 'B650E PG-ITX', priceUsd: 199, tdpWatts: 38, dimensions: { length: 170, width: 170, height: 40 }, color: '#4a3a2f', benchBase: 1, socket: 'AM5', formFactor: 'MiniITX', memoryType: 'DDR5', memorySlots: 2 },
+  { id: 'mobo-asus-x670e-hero', category: 'MOBO', brand: 'ASUS', model: 'ROG X670E Hero', priceUsd: 599, tdpWatts: 55, dimensions: { length: 305, width: 277, height: 45 }, color: '#502f3a', benchBase: 1, socket: 'AM5', formFactor: 'EATX', memoryType: 'DDR5', memorySlots: 4 },
+  { id: 'mobo-gigabyte-b550', category: 'MOBO', brand: 'Gigabyte', model: 'B550 AORUS Elite', priceUsd: 159, tdpWatts: 40, dimensions: { length: 305, width: 244, height: 40 }, color: '#2f4a3a', benchBase: 1, socket: 'AM4', formFactor: 'ATX', memoryType: 'DDR4', memorySlots: 4 },
+  { id: 'mobo-msi-b450-tomahawk', category: 'MOBO', brand: 'MSI', model: 'B450 Tomahawk Max', priceUsd: 119, tdpWatts: 35, dimensions: { length: 305, width: 244, height: 40 }, color: '#2f4a45', benchBase: 1, socket: 'AM4', formFactor: 'ATX', memoryType: 'DDR4', memorySlots: 4 },
 
   // ----------------------------- CPUS ----------------------------
-  {
-    id: 'cpu-intel-i9-14900k', category: 'CPU', brand: 'Intel', model: 'Core i9-14900K',
-    priceUsd: 589, tdpWatts: 253, dimensions: { length: 45, width: 37.5, height: 7 },
-    color: '#6c8ebf', benchBase: 5.0,
-    socket: 'LGA1700', cores: 24, threads: 32, baseClock: 3.2, boostClock: 6.0,
-    memoryType: 'DDR5', igpu: true,
-  },
-  {
-    id: 'cpu-amd-7800x3d', category: 'CPU', brand: 'AMD', model: 'Ryzen 7 7800X3D',
-    priceUsd: 399, tdpWatts: 120, dimensions: { length: 40, width: 40, height: 7 },
-    color: '#bf6c6c', benchBase: 4.6,
-    socket: 'AM5', cores: 8, threads: 16, baseClock: 4.2, boostClock: 5.0,
-    memoryType: 'DDR5', igpu: true,
-  },
-  {
-    id: 'cpu-intel-i5-13600k', category: 'CPU', brand: 'Intel', model: 'Core i5-13600K',
-    priceUsd: 289, tdpWatts: 181, dimensions: { length: 45, width: 37.5, height: 7 },
-    color: '#6c9ebf', benchBase: 3.8,
-    socket: 'LGA1700', cores: 14, threads: 20, baseClock: 3.5, boostClock: 5.1,
-    memoryType: 'DDR5', igpu: true,
-  },
-  {
-    id: 'cpu-amd-5600x', category: 'CPU', brand: 'AMD', model: 'Ryzen 5 5600X',
-    priceUsd: 159, tdpWatts: 65, dimensions: { length: 40, width: 40, height: 7 },
-    color: '#bf8c6c', benchBase: 2.8,
-    socket: 'AM4', cores: 6, threads: 12, baseClock: 3.7, boostClock: 4.6,
-    memoryType: 'DDR4', igpu: false,
-  },
+  { id: 'cpu-intel-i9-14900k', category: 'CPU', brand: 'Intel', model: 'Core i9-14900K', priceUsd: 549, tdpWatts: 253, dimensions: { length: 45, width: 37.5, height: 7 }, color: '#6c8ebf', benchBase: 5.0, socket: 'LGA1700', cores: 24, threads: 32, baseClock: 3.2, boostClock: 6.0, memoryType: 'DDR5', igpu: true },
+  { id: 'cpu-intel-i7-14700k', category: 'CPU', brand: 'Intel', model: 'Core i7-14700K', priceUsd: 399, tdpWatts: 253, dimensions: { length: 45, width: 37.5, height: 7 }, color: '#6c92bf', benchBase: 4.4, socket: 'LGA1700', cores: 20, threads: 28, baseClock: 3.4, boostClock: 5.6, memoryType: 'DDR5', igpu: true },
+  { id: 'cpu-intel-i5-14600k', category: 'CPU', brand: 'Intel', model: 'Core i5-14600K', priceUsd: 309, tdpWatts: 181, dimensions: { length: 45, width: 37.5, height: 7 }, color: '#6c98bf', benchBase: 3.7, socket: 'LGA1700', cores: 14, threads: 20, baseClock: 3.5, boostClock: 5.3, memoryType: 'DDR5', igpu: true },
+  { id: 'cpu-intel-i5-13400f', category: 'CPU', brand: 'Intel', model: 'Core i5-13400F', priceUsd: 199, tdpWatts: 148, dimensions: { length: 45, width: 37.5, height: 7 }, color: '#6c9ebf', benchBase: 3.0, socket: 'LGA1700', cores: 10, threads: 16, baseClock: 2.5, boostClock: 4.6, memoryType: 'DDR5', igpu: false },
+  { id: 'cpu-amd-7950x3d', category: 'CPU', brand: 'AMD', model: 'Ryzen 9 7950X3D', priceUsd: 599, tdpWatts: 120, dimensions: { length: 40, width: 40, height: 7 }, color: '#bf5c5c', benchBase: 5.2, socket: 'AM5', cores: 16, threads: 32, baseClock: 4.2, boostClock: 5.7, memoryType: 'DDR5', igpu: true },
+  { id: 'cpu-amd-7800x3d', category: 'CPU', brand: 'AMD', model: 'Ryzen 7 7800X3D', priceUsd: 399, tdpWatts: 120, dimensions: { length: 40, width: 40, height: 7 }, color: '#bf6c6c', benchBase: 4.6, socket: 'AM5', cores: 8, threads: 16, baseClock: 4.2, boostClock: 5.0, memoryType: 'DDR5', igpu: true },
+  { id: 'cpu-amd-7600x', category: 'CPU', brand: 'AMD', model: 'Ryzen 5 7600X', priceUsd: 229, tdpWatts: 105, dimensions: { length: 40, width: 40, height: 7 }, color: '#bf7c6c', benchBase: 3.4, socket: 'AM5', cores: 6, threads: 12, baseClock: 4.7, boostClock: 5.3, memoryType: 'DDR5', igpu: true },
+  { id: 'cpu-amd-5800x3d', category: 'CPU', brand: 'AMD', model: 'Ryzen 7 5800X3D', priceUsd: 329, tdpWatts: 105, dimensions: { length: 40, width: 40, height: 7 }, color: '#bf846c', benchBase: 3.8, socket: 'AM4', cores: 8, threads: 16, baseClock: 3.4, boostClock: 4.5, memoryType: 'DDR4', igpu: false },
+  { id: 'cpu-amd-5600x', category: 'CPU', brand: 'AMD', model: 'Ryzen 5 5600X', priceUsd: 129, tdpWatts: 65, dimensions: { length: 40, width: 40, height: 7 }, color: '#bf8c6c', benchBase: 2.8, socket: 'AM4', cores: 6, threads: 12, baseClock: 3.7, boostClock: 4.6, memoryType: 'DDR4', igpu: false },
 
   // ----------------------------- GPUS ----------------------------
-  {
-    id: 'gpu-rtx-4090', category: 'GPU', brand: 'NVIDIA', model: 'GeForce RTX 4090',
-    priceUsd: 1599, tdpWatts: 450, dimensions: { length: 304, width: 137, height: 61 },
-    color: '#3fae6b', benchBase: 10.0, vramGb: 24, recommendedPsuWatts: 850,
-  },
-  {
-    id: 'gpu-rx-7900xtx', category: 'GPU', brand: 'AMD', model: 'Radeon RX 7900 XTX',
-    priceUsd: 999, tdpWatts: 355, dimensions: { length: 287, width: 135, height: 51 },
-    color: '#d14b3a', benchBase: 8.5, vramGb: 24, recommendedPsuWatts: 800,
-  },
-  {
-    id: 'gpu-rtx-4070', category: 'GPU', brand: 'NVIDIA', model: 'GeForce RTX 4070',
-    priceUsd: 549, tdpWatts: 200, dimensions: { length: 244, width: 112, height: 40 },
-    color: '#46c47a', benchBase: 6.0, vramGb: 12, recommendedPsuWatts: 650,
-  },
-  {
-    id: 'gpu-rtx-3060', category: 'GPU', brand: 'NVIDIA', model: 'GeForce RTX 3060',
-    priceUsd: 299, tdpWatts: 170, dimensions: { length: 242, width: 112, height: 40 },
-    color: '#5bd48f', benchBase: 4.0, vramGb: 12, recommendedPsuWatts: 550,
-  },
+  { id: 'gpu-rtx-4090', category: 'GPU', brand: 'NVIDIA', model: 'GeForce RTX 4090', priceUsd: 1599, tdpWatts: 450, dimensions: { length: 304, width: 137, height: 61 }, color: '#3fae6b', benchBase: 10.0, vramGb: 24, recommendedPsuWatts: 850 },
+  { id: 'gpu-rtx-4080s', category: 'GPU', brand: 'NVIDIA', model: 'GeForce RTX 4080 Super', priceUsd: 999, tdpWatts: 320, dimensions: { length: 304, width: 137, height: 61 }, color: '#43b06f', benchBase: 8.6, vramGb: 16, recommendedPsuWatts: 750 },
+  { id: 'gpu-rtx-4070tis', category: 'GPU', brand: 'NVIDIA', model: 'RTX 4070 Ti Super', priceUsd: 799, tdpWatts: 285, dimensions: { length: 285, width: 120, height: 50 }, color: '#46b873', benchBase: 7.4, vramGb: 16, recommendedPsuWatts: 700 },
+  { id: 'gpu-rtx-4070', category: 'GPU', brand: 'NVIDIA', model: 'GeForce RTX 4070', priceUsd: 549, tdpWatts: 200, dimensions: { length: 244, width: 112, height: 40 }, color: '#46c47a', benchBase: 6.0, vramGb: 12, recommendedPsuWatts: 650 },
+  { id: 'gpu-rtx-4060', category: 'GPU', brand: 'NVIDIA', model: 'GeForce RTX 4060', priceUsd: 299, tdpWatts: 115, dimensions: { length: 200, width: 112, height: 40 }, color: '#54d488', benchBase: 4.2, vramGb: 8, recommendedPsuWatts: 550 },
+  { id: 'gpu-rtx-3060', category: 'GPU', brand: 'NVIDIA', model: 'GeForce RTX 3060', priceUsd: 279, tdpWatts: 170, dimensions: { length: 242, width: 112, height: 40 }, color: '#5bd48f', benchBase: 4.0, vramGb: 12, recommendedPsuWatts: 550 },
+  { id: 'gpu-rx-7900xtx', category: 'GPU', brand: 'AMD', model: 'Radeon RX 7900 XTX', priceUsd: 929, tdpWatts: 355, dimensions: { length: 287, width: 135, height: 51 }, color: '#d14b3a', benchBase: 8.5, vramGb: 24, recommendedPsuWatts: 800 },
+  { id: 'gpu-rx-7800xt', category: 'GPU', brand: 'AMD', model: 'Radeon RX 7800 XT', priceUsd: 499, tdpWatts: 263, dimensions: { length: 267, width: 120, height: 50 }, color: '#d6584a', benchBase: 6.6, vramGb: 16, recommendedPsuWatts: 700 },
+  { id: 'gpu-rx-7600', category: 'GPU', brand: 'AMD', model: 'Radeon RX 7600', priceUsd: 269, tdpWatts: 165, dimensions: { length: 204, width: 112, height: 40 }, color: '#db6557', benchBase: 4.1, vramGb: 8, recommendedPsuWatts: 550 },
+  { id: 'gpu-arc-a770', category: 'GPU', brand: 'Intel', model: 'Arc A770', priceUsd: 279, tdpWatts: 225, dimensions: { length: 280, width: 120, height: 50 }, color: '#4a90d6', benchBase: 4.3, vramGb: 16, recommendedPsuWatts: 600 },
 
   // ----------------------------- RAM -----------------------------
-  {
-    id: 'ram-corsair-ddr5-32', category: 'RAM', brand: 'Corsair', model: 'Vengeance 32GB DDR5',
-    priceUsd: 109, tdpWatts: 8, dimensions: { length: 133, width: 7, height: 44 },
-    color: '#c9a227', benchBase: 1, memoryType: 'DDR5', capacityGb: 32, modules: 2, speedMhz: 6000,
-  },
-  {
-    id: 'ram-gskill-ddr5-64', category: 'RAM', brand: 'G.Skill', model: 'Trident Z5 64GB DDR5',
-    priceUsd: 219, tdpWatts: 10, dimensions: { length: 133, width: 7, height: 44 },
-    color: '#d4b94a', benchBase: 1, memoryType: 'DDR5', capacityGb: 64, modules: 2, speedMhz: 6400,
-  },
-  {
-    id: 'ram-corsair-ddr4-32', category: 'RAM', brand: 'Corsair', model: 'Vengeance 32GB DDR4',
-    priceUsd: 79, tdpWatts: 6, dimensions: { length: 133, width: 7, height: 44 },
-    color: '#b8941f', benchBase: 1, memoryType: 'DDR4', capacityGb: 32, modules: 2, speedMhz: 3600,
-  },
+  { id: 'ram-corsair-ddr5-32-6000', category: 'RAM', brand: 'Corsair', model: 'Vengeance 32GB DDR5-6000', priceUsd: 99, tdpWatts: 8, dimensions: { length: 133, width: 7, height: 44 }, color: '#c9a227', benchBase: 1, memoryType: 'DDR5', capacityGb: 32, modules: 2, speedMhz: 6000 },
+  { id: 'ram-gskill-ddr5-32-6400', category: 'RAM', brand: 'G.Skill', model: 'Trident Z5 32GB DDR5-6400', priceUsd: 129, tdpWatts: 9, dimensions: { length: 133, width: 7, height: 44 }, color: '#d4b94a', benchBase: 1, memoryType: 'DDR5', capacityGb: 32, modules: 2, speedMhz: 6400 },
+  { id: 'ram-gskill-ddr5-64-6000', category: 'RAM', brand: 'G.Skill', model: 'Trident Z5 64GB DDR5-6000', priceUsd: 199, tdpWatts: 11, dimensions: { length: 133, width: 7, height: 44 }, color: '#dcc25a', benchBase: 1, memoryType: 'DDR5', capacityGb: 64, modules: 2, speedMhz: 6000 },
+  { id: 'ram-corsair-ddr5-32-7200', category: 'RAM', brand: 'Corsair', model: 'Dominator 32GB DDR5-7200', priceUsd: 189, tdpWatts: 10, dimensions: { length: 133, width: 7, height: 55 }, color: '#e0c850', benchBase: 1, memoryType: 'DDR5', capacityGb: 32, modules: 2, speedMhz: 7200 },
+  { id: 'ram-corsair-ddr4-32-3600', category: 'RAM', brand: 'Corsair', model: 'Vengeance 32GB DDR4-3600', priceUsd: 74, tdpWatts: 6, dimensions: { length: 133, width: 7, height: 44 }, color: '#b8941f', benchBase: 1, memoryType: 'DDR4', capacityGb: 32, modules: 2, speedMhz: 3600 },
+  { id: 'ram-gskill-ddr4-16-3200', category: 'RAM', brand: 'G.Skill', model: 'Ripjaws V 16GB DDR4-3200', priceUsd: 39, tdpWatts: 5, dimensions: { length: 133, width: 7, height: 40 }, color: '#a8861a', benchBase: 1, memoryType: 'DDR4', capacityGb: 16, modules: 2, speedMhz: 3200 },
+  { id: 'ram-crucial-ddr4-64-3200', category: 'RAM', brand: 'Crucial', model: 'Ballistix 64GB DDR4-3200', priceUsd: 129, tdpWatts: 8, dimensions: { length: 133, width: 7, height: 39 }, color: '#c4a030', benchBase: 1, memoryType: 'DDR4', capacityGb: 64, modules: 2, speedMhz: 3200 },
 
   // ----------------------------- PSUS ----------------------------
-  {
-    id: 'psu-corsair-rm850x', category: 'PSU', brand: 'Corsair', model: 'RM850x',
-    priceUsd: 139, tdpWatts: 0, dimensions: { length: 160, width: 150, height: 86 },
-    color: '#444448', benchBase: 1, wattage: 850, efficiency: '80+ Gold',
-  },
-  {
-    id: 'psu-corsair-hx1000', category: 'PSU', brand: 'Corsair', model: 'HX1000',
-    priceUsd: 199, tdpWatts: 0, dimensions: { length: 180, width: 150, height: 86 },
-    color: '#3a3a3e', benchBase: 1, wattage: 1000, efficiency: '80+ Platinum',
-  },
-  {
-    id: 'psu-evga-650b', category: 'PSU', brand: 'EVGA', model: '650 BR',
-    priceUsd: 69, tdpWatts: 0, dimensions: { length: 150, width: 150, height: 86 },
-    color: '#4e4e52', benchBase: 1, wattage: 650, efficiency: '80+ Bronze',
-  },
+  { id: 'psu-corsair-rm1000x', category: 'PSU', brand: 'Corsair', model: 'RM1000x', priceUsd: 179, tdpWatts: 0, dimensions: { length: 160, width: 150, height: 86 }, color: '#3a3a3e', benchBase: 1, wattage: 1000, efficiency: '80+ Gold' },
+  { id: 'psu-corsair-rm850x', category: 'PSU', brand: 'Corsair', model: 'RM850x', priceUsd: 139, tdpWatts: 0, dimensions: { length: 160, width: 150, height: 86 }, color: '#444448', benchBase: 1, wattage: 850, efficiency: '80+ Gold' },
+  { id: 'psu-corsair-rm750e', category: 'PSU', brand: 'Corsair', model: 'RM750e', priceUsd: 99, tdpWatts: 0, dimensions: { length: 140, width: 150, height: 86 }, color: '#4a4a4e', benchBase: 1, wattage: 750, efficiency: '80+ Gold' },
+  { id: 'psu-seasonic-650', category: 'PSU', brand: 'Seasonic', model: 'Focus GX-650', priceUsd: 89, tdpWatts: 0, dimensions: { length: 140, width: 150, height: 86 }, color: '#404044', benchBase: 1, wattage: 650, efficiency: '80+ Gold' },
+  { id: 'psu-evga-600', category: 'PSU', brand: 'EVGA', model: '600 BR', priceUsd: 59, tdpWatts: 0, dimensions: { length: 150, width: 150, height: 86 }, color: '#4e4e52', benchBase: 1, wattage: 600, efficiency: '80+ Bronze' },
+  { id: 'psu-bequiet-1200', category: 'PSU', brand: 'be quiet!', model: 'Dark Power 13 1200W', priceUsd: 329, tdpWatts: 0, dimensions: { length: 175, width: 150, height: 86 }, color: '#2e2e32', benchBase: 1, wattage: 1200, efficiency: '80+ Titanium' },
 
   // --------------------------- COOLERS ---------------------------
-  {
-    id: 'cooler-corsair-h150i', category: 'COOLER', brand: 'Corsair', model: 'iCUE H150i (360mm)',
-    priceUsd: 189, tdpWatts: 10, dimensions: { length: 397, width: 120, height: 27 },
-    color: '#5a8fd6', benchBase: 1, coolerType: 'AIO',
-    supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 360, airHeightMm: 0,
-    dissipationWatts: 350,
-  },
-  {
-    id: 'cooler-nzxt-x63', category: 'COOLER', brand: 'NZXT', model: 'Kraken X63 (280mm)',
-    priceUsd: 149, tdpWatts: 8, dimensions: { length: 315, width: 140, height: 30 },
-    color: '#6a9fe6', benchBase: 1, coolerType: 'AIO',
-    supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 280, airHeightMm: 0,
-    dissipationWatts: 280,
-  },
-  {
-    id: 'cooler-noctua-nhd15', category: 'COOLER', brand: 'Noctua', model: 'NH-D15',
-    priceUsd: 109, tdpWatts: 6, dimensions: { length: 150, width: 161, height: 165 },
-    color: '#b5825a', benchBase: 1, coolerType: 'Air',
-    supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 0, airHeightMm: 165,
-    dissipationWatts: 250,
-  },
-  {
-    id: 'cooler-cm-hyper212', category: 'COOLER', brand: 'Cooler Master', model: 'Hyper 212',
-    priceUsd: 44, tdpWatts: 4, dimensions: { length: 120, width: 80, height: 159 },
-    color: '#9a9a9e', benchBase: 1, coolerType: 'Air',
-    supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 0, airHeightMm: 159,
-    dissipationWatts: 150,
-  },
+  { id: 'cooler-arctic-lf3-360', category: 'COOLER', brand: 'Arctic', model: 'Liquid Freezer III 360', priceUsd: 130, tdpWatts: 10, dimensions: { length: 398, width: 120, height: 38 }, color: '#5a8fd6', benchBase: 1, coolerType: 'AIO', supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 360, airHeightMm: 0, dissipationWatts: 380 },
+  { id: 'cooler-corsair-h150i', category: 'COOLER', brand: 'Corsair', model: 'iCUE H150i 360', priceUsd: 189, tdpWatts: 10, dimensions: { length: 397, width: 120, height: 27 }, color: '#5a8fd6', benchBase: 1, coolerType: 'AIO', supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 360, airHeightMm: 0, dissipationWatts: 350 },
+  { id: 'cooler-nzxt-x63', category: 'COOLER', brand: 'NZXT', model: 'Kraken 280', priceUsd: 149, tdpWatts: 8, dimensions: { length: 315, width: 140, height: 30 }, color: '#6a9fe6', benchBase: 1, coolerType: 'AIO', supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 280, airHeightMm: 0, dissipationWatts: 280 },
+  { id: 'cooler-corsair-h100i', category: 'COOLER', brand: 'Corsair', model: 'iCUE H100i 240', priceUsd: 119, tdpWatts: 8, dimensions: { length: 277, width: 120, height: 27 }, color: '#6a9fe6', benchBase: 1, coolerType: 'AIO', supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 240, airHeightMm: 0, dissipationWatts: 240 },
+  { id: 'cooler-noctua-nhd15', category: 'COOLER', brand: 'Noctua', model: 'NH-D15', priceUsd: 109, tdpWatts: 6, dimensions: { length: 150, width: 161, height: 165 }, color: '#b5825a', benchBase: 1, coolerType: 'Air', supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 0, airHeightMm: 165, dissipationWatts: 250 },
+  { id: 'cooler-bequiet-drp4', category: 'COOLER', brand: 'be quiet!', model: 'Dark Rock Pro 4', priceUsd: 89, tdpWatts: 6, dimensions: { length: 136, width: 146, height: 163 }, color: '#2e2e32', benchBase: 1, coolerType: 'Air', supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 0, airHeightMm: 163, dissipationWatts: 250 },
+  { id: 'cooler-thermalright-pa', category: 'COOLER', brand: 'Thermalright', model: 'Peerless Assassin 120', priceUsd: 35, tdpWatts: 5, dimensions: { length: 125, width: 110, height: 157 }, color: '#9a9a9e', benchBase: 1, coolerType: 'Air', supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 0, airHeightMm: 157, dissipationWatts: 220 },
+  { id: 'cooler-cm-hyper212', category: 'COOLER', brand: 'Cooler Master', model: 'Hyper 212', priceUsd: 44, tdpWatts: 4, dimensions: { length: 120, width: 80, height: 159 }, color: '#9a9a9e', benchBase: 1, coolerType: 'Air', supportedSockets: ['LGA1700', 'AM5', 'AM4'], radiatorSizeMm: 0, airHeightMm: 159, dissipationWatts: 150 },
 ];
 
 export function byCategory(cat: string): Component[] {
