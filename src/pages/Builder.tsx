@@ -1,40 +1,54 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BuildScene from '../scene/BuildScene';
 import { useBuildStore } from '../store/buildStore';
 import { byCategory } from '../data/catalog';
 import { CATEGORY_LABELS, CATEGORY_ORDER } from '../lib/types';
-import { validateBuild, isBuildValid } from '../rules/compatibility';
+import { validateBuild } from '../rules/compatibility';
 import { runBenchmark } from '../rules/benchmark';
 import { submitBuild } from '../lib/submit';
 
 export default function Builder() {
-  const { build, activeCategory, setActiveCategory, setComponent, removeComponent, result, setResult, reset } =
-    useBuildStore();
+  const {
+    build, activeCategory, setActiveCategory, setComponent, removeComponent,
+    result, setResult, phase, setPhase, errors, setErrors, reset,
+  } = useBuildStore();
 
-  const checks = useMemo(() => validateBuild(build), [build]);
-  const errors = checks.filter((c) => !c.ok);
-  const valid = isBuildValid(build);
   const parts = byCategory(activeCategory);
+  const selectedCount = CATEGORY_ORDER.filter((c) => build[c]).length;
+  const allSelected = selectedCount === CATEGORY_ORDER.length;
+  const totals = useMemo(() => {
+    let price = 0, watts = 0;
+    for (const c of CATEGORY_ORDER) { price += build[c]?.priceUsd ?? 0; watts += build[c]?.tdpWatts ?? 0; }
+    return { price, watts };
+  }, [build]);
 
+  const timer = useRef<number | null>(null);
+  const runTest = () => {
+    if (!allSelected) return;
+    setPhase('testing');
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      const errs = validateBuild(build).filter((r) => !r.ok);
+      if (errs.length) {
+        setErrors(errs);
+        setPhase('failed');
+      } else {
+        setResult(runBenchmark(build));
+        setPhase('done');
+      }
+    }, 2200);
+  };
+
+  // submit modal
   const [modalOpen, setModalOpen] = useState(false);
   const [username, setUsername] = useState('');
   const [buildName, setBuildName] = useState('');
   const [submitState, setSubmitState] = useState<{ busy: boolean; msg: string }>({ busy: false, msg: '' });
-
-  const onBenchmark = () => {
-    if (!valid) return;
-    setResult(runBenchmark(build));
-  };
-
   const onSubmit = async () => {
     setSubmitState({ busy: true, msg: '' });
     const r = await submitBuild(username.trim(), buildName.trim(), build);
-    if (r.ok) {
-      setSubmitState({ busy: false, msg: `Submitted! Rank #${r.rank ?? '—'}` });
-    } else {
-      setSubmitState({ busy: false, msg: `⚠️ ${r.error}` });
-    }
+    setSubmitState({ busy: false, msg: r.ok ? `✅ Submitted! Rank #${r.rank ?? '—'}` : `⚠️ ${r.error}` });
   };
 
   return (
@@ -49,11 +63,9 @@ export default function Builder() {
         <aside className="panel catalog">
           <div className="tabs">
             {CATEGORY_ORDER.map((cat) => (
-              <button
-                key={cat}
+              <button key={cat}
                 className={`tab ${cat === activeCategory ? 'active' : ''} ${build[cat] ? 'filled' : ''}`}
-                onClick={() => setActiveCategory(cat)}
-              >
+                onClick={() => setActiveCategory(cat)}>
                 {CATEGORY_LABELS[cat]}{build[cat] ? ' ✓' : ''}
               </button>
             ))}
@@ -62,11 +74,8 @@ export default function Builder() {
             {parts.map((p) => {
               const selected = build[activeCategory]?.id === p.id;
               return (
-                <button
-                  key={p.id}
-                  className={`part ${selected ? 'selected' : ''}`}
-                  onClick={() => (selected ? removeComponent(activeCategory) : setComponent(p))}
-                >
+                <button key={p.id} className={`part ${selected ? 'selected' : ''}`}
+                  onClick={() => (selected ? removeComponent(activeCategory) : setComponent(p))}>
                   <span className="dot" style={{ background: p.color }} />
                   <span className="part-name">{p.brand} {p.model}</span>
                   <span className="part-meta">${p.priceUsd}{p.tdpWatts ? ` · ${p.tdpWatts}W` : ''}</span>
@@ -77,41 +86,82 @@ export default function Builder() {
           <button className="btn ghost wide" onClick={reset}>Reset build</button>
         </aside>
 
-        {/* 3D */}
+        {/* 3D viewport */}
         <main className="viewport">
           <BuildScene build={build} />
+          {phase === 'testing' && (
+            <div className="overlay">
+              <div className="spinner" />
+              <div>Running benchmark…</div>
+              <div className="muted small">Stress-testing CPU &amp; GPU, checking thermals</div>
+            </div>
+          )}
         </main>
 
-        {/* Validation + benchmark */}
+        {/* Inspector */}
         <aside className="panel inspector">
-          <h2>Pre-Boot Check</h2>
-          {errors.length === 0 ? (
-            <p className="ok">✅ All checks passed — ready to benchmark.</p>
-          ) : (
-            <ul className="errors">
-              {errors.map((e) => <li key={e.code}>❌ {e.message}</li>)}
-            </ul>
+          {phase === 'building' && (
+            <>
+              <h2>Your Build</h2>
+              <ul className="summary">
+                {CATEGORY_ORDER.map((cat) => (
+                  <li key={cat}>
+                    <span className="muted">{CATEGORY_LABELS[cat]}</span>
+                    <span>{build[cat] ? build[cat]!.model : '—'}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="totals">
+                <div><span className="muted">Total cost</span><strong>${totals.price.toLocaleString()}</strong></div>
+                <div><span className="muted">Est. power draw</span><strong>{totals.watts} W</strong></div>
+              </div>
+              <button className="btn primary wide" disabled={!allSelected} onClick={runTest}>
+                ⚡ Test &amp; Benchmark
+              </button>
+              {!allSelected && (
+                <p className="muted small center">Select all {CATEGORY_ORDER.length} components
+                  ({selectedCount}/{CATEGORY_ORDER.length})</p>
+              )}
+            </>
           )}
 
-          <button className="btn primary wide" disabled={!valid} onClick={onBenchmark}>
-            ⚡ Run Benchmark
-          </button>
+          {phase === 'testing' && <p className="muted">Benchmarking in progress…</p>}
 
-          {result && (
-            <div className="result">
+          {phase === 'failed' && (
+            <>
+              <h2 className="danger">❌ Build Failed</h2>
+              <p className="muted small">Compatibility problems were detected during the pre-boot check:</p>
+              <ul className="errors">
+                {errors.map((e) => <li key={e.code}>{e.message}</li>)}
+              </ul>
+              <button className="btn primary wide" onClick={() => setPhase('building')}>← Fix the build</button>
+            </>
+          )}
+
+          {phase === 'done' && result && (
+            <>
+              <h2 className="ok">✅ Benchmark Complete</h2>
               <div className="big-score">{result.finalScore.toLocaleString()}</div>
-              <div className="muted">Performance Score</div>
+              <div className="muted center">Performance Score</div>
+              <div className="stat-grid">
+                <div className="stat"><span>❄️ Cooling</span><b>{result.coolingScore}/100</b></div>
+                <div className="stat"><span>💲 Value</span><b>{result.valueScore}</b></div>
+                <div className="stat"><span>📊 Throughput</span><b>{result.throughputScore.toLocaleString()}</b></div>
+                <div className="stat"><span>⚡ Power</span><b>{result.totalWatts} W</b></div>
+                <div className="stat"><span>🛒 Cost</span><b>${result.totalPrice.toLocaleString()}</b></div>
+                <div className="stat"><span>🌡️ Thermal</span><b>×{result.thermalFactor}</b></div>
+              </div>
               <ul className="breakdown">
-                <li><span>CPU</span><span>{result.cpuScore.toLocaleString()}</span></li>
-                <li><span>GPU</span><span>{result.gpuScore.toLocaleString()}</span></li>
-                <li><span>Thermal</span><span>×{result.thermalFactor}</span></li>
+                <li><span>CPU score</span><span>{result.cpuScore.toLocaleString()}</span></li>
+                <li><span>GPU score</span><span>{result.gpuScore.toLocaleString()}</span></li>
                 <li><span>Synergy</span><span>×{result.synergyFactor}</span></li>
                 <li><span>Memory</span><span>×{result.memoryFactor}</span></li>
               </ul>
               <button className="btn accent wide" onClick={() => { setModalOpen(true); setSubmitState({ busy: false, msg: '' }); }}>
-                Submit to Leaderboard
+                🏆 Submit to Leaderboard
               </button>
-            </div>
+              <button className="btn ghost wide" onClick={() => setPhase('building')}>Tweak build</button>
+            </>
           )}
         </aside>
       </div>
