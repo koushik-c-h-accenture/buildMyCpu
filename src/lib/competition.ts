@@ -7,6 +7,7 @@ export interface Competition {
   budget_usd: number;
   max_submissions: number;
   max_tests?: number; // 0 / undefined = unlimited
+  auto_filter?: boolean; // host toggle: guide players by hiding incompatible parts
   duration_min: number;
   status: 'lobby' | 'running' | 'ended';
   started_at: string | null;
@@ -23,16 +24,16 @@ export function genGameId(): string {
 }
 
 export async function createCompetition(p: {
-  name: string; hostPin: string; budgetUsd: number; maxSubmissions: number; durationMin: number; maxTests: number;
+  name: string; hostPin: string; budgetUsd: number; maxSubmissions: number; durationMin: number; maxTests: number; autoFilter: boolean;
 }): Promise<{ ok: boolean; gameId?: string; error?: string }> {
   const game_id = genGameId();
   const base = {
     game_id, name: p.name, host_pin: p.hostPin, budget_usd: p.budgetUsd,
     max_submissions: p.maxSubmissions, duration_min: p.durationMin,
   };
-  let { error } = await supabase.from('competitions').insert({ ...base, max_tests: p.maxTests });
-  // Resilience: if the max_tests column hasn't been added yet, create without it.
-  if (error && /max_tests/i.test(error.message)) {
+  let { error } = await supabase.from('competitions').insert({ ...base, max_tests: p.maxTests, auto_filter: p.autoFilter });
+  // Resilience: if the new columns haven't been added yet, create without them.
+  if (error && /(max_tests|auto_filter)/i.test(error.message)) {
     ({ error } = await supabase.from('competitions').insert(base));
   }
   if (error) {
