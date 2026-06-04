@@ -7,7 +7,7 @@ import { getCompetition, countSubmissions, type Competition } from '../lib/compe
 import ScoringDoc from '../components/ScoringDoc';
 import { byCategory } from '../data/catalog';
 import { CATEGORY_LABELS, CATEGORY_ORDER, OPTIONAL_CATEGORIES } from '../lib/types';
-import { postCheck, type RuleResult } from '../rules/compatibility';
+import { postCheck, compatibleParts, type RuleResult } from '../rules/compatibility';
 import { runBenchmark, stressReport } from '../rules/benchmark';
 import { submitBuild } from '../lib/submit';
 
@@ -26,7 +26,6 @@ export default function Builder() {
     result, setResult, phase, setPhase, errors, setErrors, reset,
   } = useBuildStore();
 
-  const parts = byCategory(activeCategory);
   const totals = useMemo(() => {
     let price = 0, watts = 0;
     for (const c of CATEGORY_ORDER) { price += build[c]?.priceUsd ?? 0; watts += build[c]?.tdpWatts ?? 0; }
@@ -52,6 +51,23 @@ export default function Builder() {
   useEffect(() => {
     if (notStarted && !autoShown.current) { setScoringOpen(true); autoShown.current = true; }
   }, [notStarted]);
+
+  // catalog search + PRACTICE-only compatibility filtering (competition shows everything)
+  const [query, setQuery] = useState('');
+  const rawParts = byCategory(activeCategory);
+  const compatList = inComp ? rawParts : compatibleParts(activeCategory, rawParts, build);
+  const parts = query.trim()
+    ? compatList.filter((p) => `${p.brand} ${p.model}`.toLowerCase().includes(query.trim().toLowerCase()))
+    : compatList;
+  const hiddenIncompatible = inComp ? 0 : rawParts.length - compatList.length;
+
+  // competition test limit (host-defined; 0 = unlimited), tracked per participant
+  const maxTests = comp?.max_tests ?? 0;
+  const [testsUsed, setTestsUsed] = useState(0);
+  useEffect(() => {
+    if (inComp && participant) setTestsUsed(Number(localStorage.getItem(`bmpc-tests-${comp!.game_id}-${participant}`) || 0));
+  }, [inComp, comp, participant]);
+  const testsExhausted = inComp && maxTests > 0 && testsUsed >= maxTests;
   const endMs = comp?.ends_at ? new Date(comp.ends_at).getTime() : 0;
   const timeLeft = inComp && comp!.status === 'running' && endMs ? Math.max(0, Math.floor((endMs - now) / 1000)) : null;
   const timerEnded = inComp && comp!.status !== 'lobby' && endMs ? endMs <= now : false;
@@ -66,6 +82,11 @@ export default function Builder() {
   const [warns, setWarns] = useState<RuleResult[]>([]);
   const timer = useRef<number | null>(null);
   const runTest = () => {
+    if (testsExhausted) return;
+    if (inComp && participant) {
+      const k = `bmpc-tests-${comp!.game_id}-${participant}`;
+      const n = testsUsed + 1; localStorage.setItem(k, String(n)); setTestsUsed(n);
+    }
     const { fatal, warnings } = postCheck(build);
     setPhase('testing');
     if (timer.current) window.clearTimeout(timer.current);
@@ -103,7 +124,8 @@ export default function Builder() {
           <span>🎮 <b>{comp.name}</b> · {comp.game_id}</span>
           <span className={overBudget ? 'over' : ''}>💰 ${totals.price.toLocaleString()} / ${comp.budget_usd.toLocaleString()}</span>
           <span>⏱ {notStarted ? 'waiting for host' : timerEnded ? 'ENDED' : timeLeft != null ? `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}` : '—'}</span>
-          <span>📤 {subCount}/{comp.max_submissions}</span>
+          <span>📤 {subCount}/{comp.max_submissions} builds</span>
+          <span>🧪 {maxTests > 0 ? `${testsUsed}/${maxTests} tests` : '∞ tests'}</span>
           <span className="muted small">player: {participant}</span>
         </div>
       )}
@@ -114,11 +136,19 @@ export default function Builder() {
             {CATEGORY_ORDER.map((cat) => (
               <button key={cat}
                 className={`tab ${cat === activeCategory ? 'active' : ''} ${build[cat] ? 'filled' : ''}`}
-                onClick={() => setActiveCategory(cat)}>
+                onClick={() => { setActiveCategory(cat); setQuery(''); }}>
                 {CATEGORY_LABELS[cat]}{build[cat] ? ' ✓' : OPTIONAL_CATEGORIES.includes(cat) ? ' *' : ''}
               </button>
             ))}
           </div>
+          <input className="search" value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder={`🔍 Search ${CATEGORY_LABELS[activeCategory]}…`} />
+          <p className="muted small">
+            {parts.length} option{parts.length !== 1 ? 's' : ''}
+            {inComp
+              ? ' · all parts shown (compatibility is checked on test)'
+              : hiddenIncompatible > 0 ? ` · ${hiddenIncompatible} incompatible hidden` : ' · compatible with your build'}
+          </p>
           {OPTIONAL_CATEGORIES.includes(activeCategory) && (
             <p className="muted small">Optional — improves airflow/thermals &amp; scalability.</p>
           )}
@@ -165,8 +195,10 @@ export default function Builder() {
                 <div><span className="muted">Total cost</span><strong>${totals.price.toLocaleString()}</strong></div>
                 <div><span className="muted">Est. power</span><strong>{totals.watts} W</strong></div>
               </div>
-              <button className="btn primary wide" onClick={runTest}>🔌 Power On &amp; Test</button>
-              <p className="muted small center">Build freely — the Power-On test flags anything that won't run and any weak spots.</p>
+              <button className="btn primary wide" disabled={testsExhausted} onClick={runTest}>🔌 Power On &amp; Test</button>
+              {testsExhausted
+                ? <p className="muted small center">No tests remaining ({maxTests} used) — submit your best build.</p>
+                : <p className="muted small center">Build freely — the Power-On test flags anything that won't run and any weak spots.{inComp && maxTests > 0 ? ` Tests left: ${maxTests - testsUsed}.` : ''}</p>}
             </>
           )}
 

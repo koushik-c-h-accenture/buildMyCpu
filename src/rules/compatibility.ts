@@ -1,5 +1,5 @@
 import type {
-  Build, Case, Cooler, Cpu, Gpu, Mobo, Psu, Ram, Storage,
+  Build, Category, Component, Case, Cooler, Cpu, Gpu, Mobo, Psu, Ram, Storage,
 } from '../lib/types';
 
 export interface RuleResult {
@@ -70,6 +70,21 @@ export function postCheck(b: Build): { fatal: RuleResult[]; warnings: RuleResult
   if (!gpu && cpu?.igpu) W('IGPU', `No dedicated GPU — relying on the ${cpu.model}'s integrated graphics. Fine for desktop work, but far too weak for serious gaming or GPU workloads.`);
 
   return { fatal, warnings };
+}
+
+// Physical/standard "won't fit" conflicts (excludes missing-part and wattage,
+// which are sizing concerns rather than fitment). Used for guided filtering.
+const FIT_CODES = ['SOCKET', 'RAM_TYPE', 'CPU_RAM', 'RAM_SLOTS', 'MOBO_FIT', 'GPU_LEN', 'COOLER_SOCK', 'COOLER_H', 'RAD_FIT', 'M2'];
+
+/**
+ * Practice-mode helper: from a category's parts, keep only those that are
+ * physically compatible with the components already chosen.
+ */
+export function compatibleParts<T extends Component>(cat: Category, parts: T[], build: Build): T[] {
+  return parts.filter((p) => {
+    const test = { ...build, [cat]: p } as Build;
+    return !postCheck(test).fatal.some((r) => FIT_CODES.includes(r.code));
+  });
 }
 
 export function isRunnable(b: Build): boolean {

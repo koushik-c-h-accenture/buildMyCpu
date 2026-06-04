@@ -49,6 +49,7 @@ export default function Host() {
           <li><span className="muted">Budget</span><span>${comp.budget_usd.toLocaleString()}</span></li>
           <li><span className="muted">Timer</span><span>{comp.duration_min} min</span></li>
           <li><span className="muted">Max builds / user</span><span>{comp.max_submissions}</span></li>
+          <li><span className="muted">Max tests / user</span><span>{comp.max_tests ? comp.max_tests : 'Unlimited'}</span></li>
           <li><span className="muted">Submissions so far</span><span>{entries}</span></li>
           {comp.status === 'running' && <li><span className="muted">Time left</span><span><b>{mm}:{ss}</b></span></li>}
         </ul>
