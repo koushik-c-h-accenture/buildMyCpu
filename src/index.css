@@ -41,6 +41,9 @@ body { background: var(--bg); color: var(--text); }
 .tab.active { color: var(--text); border-color: var(--accent); }
 .tab.filled { color: var(--green); }
 
+.search { width: 100%; background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: var(--text); font-size: 13px; margin-bottom: 6px; }
+.search:focus { outline: none; border-color: var(--accent); }
+
 .parts { display: flex; flex-direction: column; gap: 6px; }
 .part {
   display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 8px;

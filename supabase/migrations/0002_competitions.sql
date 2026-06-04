@@ -33,6 +33,7 @@ create table if not exists public.competitions (
   host_pin text not null,
   budget_usd integer not null,
   max_submissions integer not null default 3,
+  max_tests integer not null default 0,        -- 0 = unlimited tests
   duration_min integer not null default 20,
   status text not null default 'lobby',   -- lobby | running | ended
   started_at timestamptz,
@@ -40,6 +41,7 @@ create table if not exists public.competitions (
   reveal boolean not null default false,
   created_at timestamptz not null default now()
 );
+alter table public.competitions add column if not exists max_tests integer not null default 0;
 alter table public.competitions enable row level security;
 drop policy if exists "comp read" on public.competitions;
 create policy "comp read" on public.competitions for select using (true);
