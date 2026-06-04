@@ -77,15 +77,16 @@ export function postCheck(b: Build): { fatal: RuleResult[]; warnings: RuleResult
 const FIT_CODES = ['SOCKET', 'RAM_TYPE', 'CPU_RAM', 'RAM_SLOTS', 'MOBO_FIT', 'GPU_LEN', 'COOLER_SOCK', 'COOLER_H', 'RAD_FIT', 'M2'];
 
 /**
- * Guided-mode helper: from a category's parts, keep only those compatible with
- * the components already chosen. When filtering PSUs, also drop ones that can't
- * power the current build (same headroom the Power-On test enforces).
+ * Guided-mode helper: from a category's parts, keep only those that keep the
+ * whole build valid — physical fitment AND power (a chosen PSU's wattage limits
+ * which power-hungry parts are shown, and the PSU list only shows units that can
+ * power the current build). Same headroom the Power-On test enforces.
  */
+const GUIDED_CODES = [...FIT_CODES, 'PSU_W'];
 export function compatibleParts<T extends Component>(cat: Category, parts: T[], build: Build): T[] {
-  const codes = cat === 'PSU' ? [...FIT_CODES, 'PSU_W'] : FIT_CODES;
   return parts.filter((p) => {
     const test = { ...build, [cat]: p } as Build;
-    return !postCheck(test).fatal.some((r) => codes.includes(r.code));
+    return !postCheck(test).fatal.some((r) => GUIDED_CODES.includes(r.code));
   });
 }
 

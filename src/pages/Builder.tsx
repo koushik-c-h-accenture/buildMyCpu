@@ -54,13 +54,16 @@ export default function Builder() {
 
   // catalog search + PRACTICE-only compatibility filtering (competition shows everything)
   const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'default' | 'price-asc' | 'price-desc'>('default');
   // guided (compatibility-filtered) in Practice always; in competition only if the host enabled it
   const guided = inComp ? !!comp!.auto_filter : true;
   const rawParts = byCategory(activeCategory);
   const compatList = guided ? compatibleParts(activeCategory, rawParts, build) : rawParts;
-  const parts = query.trim()
+  const filtered = query.trim()
     ? compatList.filter((p) => `${p.brand} ${p.model}`.toLowerCase().includes(query.trim().toLowerCase()))
     : compatList;
+  const parts = sortBy === 'default' ? filtered
+    : [...filtered].sort((a, b) => (sortBy === 'price-asc' ? a.priceUsd - b.priceUsd : b.priceUsd - a.priceUsd));
   const hiddenIncompatible = guided ? rawParts.length - compatList.length : 0;
 
   // competition test limit (host-defined; 0 = unlimited), tracked per participant
@@ -143,8 +146,15 @@ export default function Builder() {
               </button>
             ))}
           </div>
-          <input className="search" value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder={`🔍 Search ${CATEGORY_LABELS[activeCategory]}…`} />
+          <div className="catalog-controls">
+            <input className="search" value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder={`🔍 Search ${CATEGORY_LABELS[activeCategory]}…`} />
+            <select className="sort" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
+              <option value="default">Sort</option>
+              <option value="price-asc">$ low→high</option>
+              <option value="price-desc">$ high→low</option>
+            </select>
+          </div>
           <p className="muted small">
             {parts.length} option{parts.length !== 1 ? 's' : ''}
             {guided
