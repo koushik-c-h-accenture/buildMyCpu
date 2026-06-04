@@ -93,7 +93,7 @@ export default function BuildScene({ build }: { build: Build }) {
       <gridHelper args={[16, 16, '#c9c2b3', '#dcd6c8']} position={[0, -2.42, 0]} />
 
       {empty && (
-        <Html center>
+        <Html center zIndexRange={[20, 0]}>
           <div style={{ color: '#6c7086', fontFamily: 'system-ui', fontSize: 14, whiteSpace: 'nowrap' }}>
             Start building — pick any components →
           </div>
