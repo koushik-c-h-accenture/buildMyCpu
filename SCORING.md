@@ -10,6 +10,21 @@ Reward the *best-engineered* PC — not merely the most expensive one. A winning
 **powerful, affordable, power-efficient, cool, reliable, and upgradeable**. The score
 forces real trade-offs between these dimensions.
 
+## How the competition works
+
+1. A **host** creates a competition → 6-char **Game ID**; sets budget, timer, max builds/user, Host PIN.
+2. **Players join** with the Game ID + a username.
+3. The host **starts the timer** — one global countdown, same start/end for everyone.
+4. Players build any PC **within budget**; the Power-On test must pass; submit up to the allowed builds.
+5. The **leaderboard is hidden until the host reveals it**. Highest score wins.
+
+## Nothing is mandatory — the Power-On test decides
+
+- **Won't run (no score):** missing CPU / motherboard / RAM / PSU / display, or any hard
+  incompatibility (socket, memory type, fitment, wattage).
+- **Runs with penalties:** missing CPU cooler → heavy throttle; no storage → Reliability ×0.8,
+  Scalability ×0.7; no case → Scalability ×0.7; iGPU-only → performance drops; few fans → less airflow.
+
 ## The Competition Score
 
 A weighted blend of six sub-scores, each normalised to 0–100:
