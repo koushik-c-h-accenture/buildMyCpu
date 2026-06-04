@@ -5,10 +5,8 @@ import { useBuildStore } from '../store/buildStore';
 import { useCompStore } from '../store/compStore';
 import { getCompetition, countSubmissions, type Competition } from '../lib/competition';
 import { byCategory } from '../data/catalog';
-import {
-  CATEGORY_LABELS, CATEGORY_ORDER, REQUIRED_CATEGORIES, OPTIONAL_CATEGORIES,
-} from '../lib/types';
-import { validateBuild } from '../rules/compatibility';
+import { CATEGORY_LABELS, CATEGORY_ORDER, OPTIONAL_CATEGORIES } from '../lib/types';
+import { postCheck, type RuleResult } from '../rules/compatibility';
 import { runBenchmark, stressReport } from '../rules/benchmark';
 import { submitBuild } from '../lib/submit';
 
@@ -28,8 +26,6 @@ export default function Builder() {
   } = useBuildStore();
 
   const parts = byCategory(activeCategory);
-  const selectedCount = REQUIRED_CATEGORIES.filter((c) => build[c]).length;
-  const allSelected = selectedCount === REQUIRED_CATEGORIES.length;
   const totals = useMemo(() => {
     let price = 0, watts = 0;
     for (const c of CATEGORY_ORDER) { price += build[c]?.priceUsd ?? 0; watts += build[c]?.tdpWatts ?? 0; }
@@ -59,16 +55,16 @@ export default function Builder() {
     overBudget ? `Over budget by $${(totals.price - comp!.budget_usd).toLocaleString()}` :
     limitReached ? `Submission limit reached (${comp!.max_submissions})` : '';
 
+  const [warns, setWarns] = useState<RuleResult[]>([]);
   const timer = useRef<number | null>(null);
   const runTest = () => {
-    if (!allSelected) return;
-    const errs = validateBuild(build).filter((r) => !r.ok);
+    const { fatal, warnings } = postCheck(build);
     setPhase('testing');
     if (timer.current) window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
-      if (errs.length) { setErrors(errs); setPhase('failed'); }
-      else { setResult(runBenchmark(build)); setPhase('done'); }
-    }, errs.length ? 1400 : 2400);
+      if (fatal.length) { setErrors(fatal); setPhase('failed'); }
+      else { setWarns(warnings); setResult(runBenchmark(build)); setPhase('done'); }
+    }, fatal.length ? 1400 : 2400);
   };
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -161,11 +157,8 @@ export default function Builder() {
                 <div><span className="muted">Total cost</span><strong>${totals.price.toLocaleString()}</strong></div>
                 <div><span className="muted">Est. power</span><strong>{totals.watts} W</strong></div>
               </div>
-              <button className="btn primary wide" disabled={!allSelected} onClick={runTest}>🔌 Power On &amp; Test</button>
-              {!allSelected && (
-                <p className="muted small center">Select all {REQUIRED_CATEGORIES.length} required parts
-                  ({selectedCount}/{REQUIRED_CATEGORIES.length})</p>
-              )}
+              <button className="btn primary wide" onClick={runTest}>🔌 Power On &amp; Test</button>
+              <p className="muted small center">Build freely — the Power-On test flags anything that won't run and any weak spots.</p>
             </>
           )}
 
@@ -185,6 +178,11 @@ export default function Builder() {
               <h2 className="ok">✅ Benchmark Complete</h2>
               <div className="big-score">{result.finalScore.toLocaleString()}</div>
               <div className="muted center">Competition Score (/10,000)</div>
+              {warns.length > 0 && (
+                <ul className="warns">
+                  {warns.map((w) => <li key={w.code}>⚠️ {w.message}</li>)}
+                </ul>
+              )}
               <div className="subscores">
                 {SUBSCORES.map(([k, label]) => (
                   <div className="subscore" key={k}>

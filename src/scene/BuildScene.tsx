@@ -23,12 +23,23 @@ function Drop({ to, children }: { to: [number, number, number]; children: ReactN
   return <group ref={ref}>{children}</group>;
 }
 
+/** Open-air test bench platform, used when no case is selected. */
+function Bench({ w, d, y }: { w: number; d: number; y: number }) {
+  return (
+    <mesh position={[0, y, 0]} receiveShadow>
+      <boxGeometry args={[w * 1.05, 0.06, d * 1.05]} />
+      <meshStandardMaterial color="#5b6270" metalness={0.3} roughness={0.8} />
+    </mesh>
+  );
+}
+
 function Rig({ build }: { build: Build }) {
   const phase = useBuildStore((s) => s.phase);
   const pcCase = build.CASE as Case | undefined;
-  if (!pcCase) return null;
+  if (Object.keys(build).length === 0) return null;
 
-  const w = pcCase.dimensions.width * S, h = pcCase.dimensions.height * S, d = pcCase.dimensions.length * S;
+  const dims = pcCase ? pcCase.dimensions : { width: 260, height: 440, length: 440 };
+  const w = dims.width * S, h = dims.height * S, d = dims.length * S;
   const hx = w / 2, hy = h / 2, hz = d / 2;
   const boardX = hx - 0.3;
   const cpuX = boardX - 0.12;
@@ -39,12 +50,12 @@ function Rig({ build }: { build: Build }) {
   const loading = phase === 'testing' || phase === 'done';
   // airflow is driven by the fans actually present (case + extra + cooler fans)
   const coolerFans = cooler ? (isAir ? 1 : Math.round(cooler.radiatorSizeMm / 120)) : 0;
-  const fanCount = pcCase.includedFans + ((build.FANS as any)?.count ?? 0) + coolerFans;
+  const fanCount = (pcCase?.includedFans ?? 0) + ((build.FANS as any)?.count ?? 0) + coolerFans;
   const airflowSpeed = phase === 'testing' ? 3.2 : 1.6;
 
   return (
     <group>
-      <CaseShell c={pcCase} />
+      {pcCase ? <CaseShell c={pcCase} /> : <Bench w={w} d={d} y={-hy} />}
       {build.MOBO && <Drop to={[boardX, 0.05, 0]}><MoboPart c={build.MOBO as any} /></Drop>}
       {build.CPU && <Drop to={[cpuX, 0.55, -0.35]}><CpuPart c={build.CPU as any} /></Drop>}
       {build.RAM && <Drop to={[boardX - 0.18, 0.62, 0.12]}><RamPart c={build.RAM as any} /></Drop>}
@@ -68,7 +79,7 @@ function Rig({ build }: { build: Build }) {
 }
 
 export default function BuildScene({ build }: { build: Build }) {
-  const hasCase = !!build.CASE;
+  const empty = Object.keys(build).length === 0;
   return (
     <Canvas shadows camera={{ position: [-5.5, 3.2, 5.5], fov: 42 }} style={{ background: '#eae8e2' }}>
       <ambientLight intensity={1.0} />
@@ -78,13 +89,13 @@ export default function BuildScene({ build }: { build: Build }) {
 
       <Rig build={build} />
 
-      {hasCase && <ContactShadows position={[0, -2.4, 0]} opacity={0.35} scale={14} blur={2.5} far={5} />}
+      {!empty && <ContactShadows position={[0, -2.4, 0]} opacity={0.35} scale={14} blur={2.5} far={5} />}
       <gridHelper args={[16, 16, '#c9c2b3', '#dcd6c8']} position={[0, -2.42, 0]} />
 
-      {!hasCase && (
+      {empty && (
         <Html center>
           <div style={{ color: '#6c7086', fontFamily: 'system-ui', fontSize: 14, whiteSpace: 'nowrap' }}>
-            Select a case to begin →
+            Start building — pick any components →
           </div>
         </Html>
       )}
