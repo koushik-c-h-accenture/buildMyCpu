@@ -54,12 +54,14 @@ export default function Builder() {
 
   // catalog search + PRACTICE-only compatibility filtering (competition shows everything)
   const [query, setQuery] = useState('');
+  // guided (compatibility-filtered) in Practice always; in competition only if the host enabled it
+  const guided = inComp ? !!comp!.auto_filter : true;
   const rawParts = byCategory(activeCategory);
-  const compatList = inComp ? rawParts : compatibleParts(activeCategory, rawParts, build);
+  const compatList = guided ? compatibleParts(activeCategory, rawParts, build) : rawParts;
   const parts = query.trim()
     ? compatList.filter((p) => `${p.brand} ${p.model}`.toLowerCase().includes(query.trim().toLowerCase()))
     : compatList;
-  const hiddenIncompatible = inComp ? 0 : rawParts.length - compatList.length;
+  const hiddenIncompatible = guided ? rawParts.length - compatList.length : 0;
 
   // competition test limit (host-defined; 0 = unlimited), tracked per participant
   const maxTests = comp?.max_tests ?? 0;
@@ -145,9 +147,9 @@ export default function Builder() {
             placeholder={`🔍 Search ${CATEGORY_LABELS[activeCategory]}…`} />
           <p className="muted small">
             {parts.length} option{parts.length !== 1 ? 's' : ''}
-            {inComp
-              ? ' · all parts shown (compatibility is checked on test)'
-              : hiddenIncompatible > 0 ? ` · ${hiddenIncompatible} incompatible hidden` : ' · compatible with your build'}
+            {guided
+              ? (hiddenIncompatible > 0 ? ` · ${hiddenIncompatible} incompatible hidden` : ' · compatible with your build')
+              : ' · all parts shown (compatibility checked on test)'}
           </p>
           {OPTIONAL_CATEGORIES.includes(activeCategory) && (
             <p className="muted small">Optional — improves airflow/thermals &amp; scalability.</p>

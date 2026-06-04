@@ -36,13 +36,14 @@ export default function Home() {
   const [maxSub, setMaxSub] = useState(3);
   const [maxTests, setMaxTests] = useState(0);
   const [duration, setDuration] = useState(20);
+  const [autoFilter, setAutoFilter] = useState(false);
   const [pin, setPin] = useState('');
   const [created, setCreated] = useState<string | null>(null);
   const [hostMsg, setHostMsg] = useState('');
   const host = async () => {
     if (!name.trim() || !pin.trim()) { setHostMsg('Name and host PIN are required'); return; }
     setHostMsg('Creating…');
-    const r = await createCompetition({ name: name.trim(), hostPin: pin.trim(), budgetUsd: budget, maxSubmissions: maxSub, durationMin: duration, maxTests });
+    const r = await createCompetition({ name: name.trim(), hostPin: pin.trim(), budgetUsd: budget, maxSubmissions: maxSub, durationMin: duration, maxTests, autoFilter });
     if (!r.ok) { setHostMsg(`⚠️ ${r.error}`); return; }
     setCreated(r.gameId!); setHostMsg('');
   };
@@ -96,6 +97,7 @@ export default function Home() {
                   <label>Max builds / user<input type="number" value={maxSub} min={1} max={50} onChange={(e) => setMaxSub(+e.target.value)} /></label>
                   <label>Max tests / user (0 = ∞)<input type="number" value={maxTests} min={0} max={200} onChange={(e) => setMaxTests(+e.target.value)} /></label>
                 </div>
+                <label className="check"><input type="checkbox" checked={autoFilter} onChange={(e) => setAutoFilter(e.target.checked)} /> Auto-filter incompatible parts for players (guided mode)</label>
                 <label>Host PIN<input value={pin} onChange={(e) => setPin(e.target.value)} placeholder="secret PIN" maxLength={12} /></label>
                 <button className="btn primary wide" onClick={host}>Create Competition</button>
                 {hostMsg && <p className="muted small">{hostMsg}</p>}
