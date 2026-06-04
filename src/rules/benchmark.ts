@@ -42,15 +42,19 @@ export interface StressReport {
  * effective clock (after any throttling), and power draw. Deterministic.
  */
 export function stressReport(b: Build): StressReport {
-  const cpu = b.CPU as Cpu, gpu = b.GPU as Gpu, cooler = b.COOLER as Cooler;
-  const pcCase = b.CASE as Case, fans = b.FANS as Fans | undefined;
-  const airflowFans = pcCase.includedFans + (fans?.count ?? 0);
+  const cpu = b.CPU as Cpu;
+  const gpu = b.GPU as Gpu | undefined;
+  const cooler = b.COOLER as Cooler | undefined;
+  const pcCase = b.CASE as Case | undefined;
+  const fans = b.FANS as Fans | undefined;
+  const airflowFans = (pcCase?.includedFans ?? 0) + (fans?.count ?? 0);
 
-  const coolRatio = cooler.dissipationWatts / Math.max(1, cpu.tdpWatts);
-  const thermalFactor = coolRatio >= 1.3 ? 1 : coolRatio >= 1 ? 0.92 + 0.08 * ((coolRatio - 1) / 0.3) : Math.max(0.75, 0.92 * coolRatio);
-  // steady-state CPU temp: hotter when cooler is undersized, cooler with more airflow
-  const cpuTempC = Math.round(Math.min(105, 38 + (cpu.tdpWatts / cooler.dissipationWatts) * 72 - airflowFans * 1.5));
-  const gpuTempC = Math.round(Math.min(92, 58 + (gpu.tdpWatts / 350) * 26 - airflowFans * 1.6));
+  const coolerDiss = cooler ? cooler.dissipationWatts : 12;
+  const coolRatio = coolerDiss / Math.max(1, cpu.tdpWatts);
+  const tFloor = cooler ? 0.75 : 0.45;
+  const thermalFactor = coolRatio >= 1.3 ? 1 : coolRatio >= 1 ? 0.92 + 0.08 * ((coolRatio - 1) / 0.3) : Math.max(tFloor, 0.92 * coolRatio);
+  const cpuTempC = Math.round(Math.min(110, 38 + (cpu.tdpWatts / coolerDiss) * 72 - airflowFans * 1.5));
+  const gpuTempC = gpu ? Math.round(Math.min(92, 58 + (gpu.tdpWatts / 350) * 26 - airflowFans * 1.6)) : Math.min(90, cpuTempC);
   const effectiveClockGhz = Number((cpu.boostClock * thermalFactor).toFixed(2));
 
   return {
@@ -58,7 +62,7 @@ export function stressReport(b: Build): StressReport {
     baseClockGhz: cpu.boostClock,
     effectiveClockGhz,
     throttling: thermalFactor < 0.999 || cpuTempC >= 95,
-    fpsIndex: Math.round(gpu.benchBase * (gpu.vramGb / 8 + 1) * 14),
+    fpsIndex: gpu ? Math.round(gpu.benchBase * (gpu.vramGb / 8 + 1) * 14) : Math.round(cpu.benchBase * 5),
     powerDrawW: totalSystemDraw(b),
     airflowFans,
   };
@@ -97,17 +101,24 @@ function memoryFactor(ram: Ram): number {
  * See SCORING.md for the full methodology.
  */
 export function runBenchmark(b: Build): ScoreBreakdown {
-  if (!isBuildValid(b)) throw new Error('Cannot benchmark an invalid build');
-  const cpu = b.CPU as Cpu, gpu = b.GPU as Gpu, ram = b.RAM as Ram;
-  const mobo = b.MOBO as Mobo, psu = b.PSU as Psu, cooler = b.COOLER as Cooler;
-  const pcCase = b.CASE as Case, storage = b.STORAGE as Storage;
+  if (!isBuildValid(b)) throw new Error('Cannot benchmark a build that will not POST');
+  // CPU / MOBO / RAM / PSU are guaranteed present (isRunnable). The rest are optional.
+  const cpu = b.CPU as Cpu, ram = b.RAM as Ram, mobo = b.MOBO as Mobo, psu = b.PSU as Psu;
+  const gpu = b.GPU as Gpu | undefined;
+  const cooler = b.COOLER as Cooler | undefined;
+  const pcCase = b.CASE as Case | undefined;
+  const storage = b.STORAGE as Storage | undefined;
   const fans = b.FANS as Fans | undefined;
 
-  // --- raw performance ---
-  const coolRatio = cooler.dissipationWatts / Math.max(1, cpu.tdpWatts);
-  const thermalFactor = coolRatio >= 1.3 ? 1 : coolRatio >= 1 ? 0.92 + 0.08 * ((coolRatio - 1) / 0.3) : Math.max(0.75, 0.92 * coolRatio);
+  // --- raw performance (missing cooler => severe throttle; iGPU => weak graphics) ---
+  const coolerDiss = cooler ? cooler.dissipationWatts : 12; // passive heatsink only
+  const coolRatio = coolerDiss / Math.max(1, cpu.tdpWatts);
+  const tFloor = cooler ? 0.75 : 0.45;
+  const thermalFactor = coolRatio >= 1.3 ? 1 : coolRatio >= 1 ? 0.92 + 0.08 * ((coolRatio - 1) / 0.3) : Math.max(tFloor, 0.92 * coolRatio);
   const cpuScore = Math.round(cpu.benchBase * cpu.cores * cpu.boostClock * thermalFactor * 6);
-  const gpuScore = Math.round(gpu.benchBase * (gpu.vramGb / 8 + 1) * (1 + gpu.benchBase / 100) * 40);
+  const gpuScore = gpu
+    ? Math.round(gpu.benchBase * (gpu.vramGb / 8 + 1) * (1 + gpu.benchBase / 100) * 40)
+    : Math.round(cpu.benchBase * 45); // integrated graphics fallback
   const synergyFactor = synergy(cpuScore, gpuScore);
   const memFactor = memoryFactor(ram);
   const performanceIndex = Math.round((cpuScore + gpuScore) * synergyFactor * memFactor);
@@ -116,26 +127,28 @@ export function runBenchmark(b: Build): ScoreBreakdown {
   const totalPrice = Object.values(b).reduce((s, c) => s + (c?.priceUsd ?? 0), 0);
   const totalWeightKg = Number((Object.keys(b).reduce((s, k) => s + (WEIGHT_G[k] ?? 0), 0) / 1000).toFixed(1));
 
-  // --- 0-100 sub-scores ---
   const performance = clamp((performanceIndex / PERF_REF) * 100);
   const value = clamp((Math.pow(performanceIndex, 0.8) / totalPrice / VAL_REF) * 100);
   const efficiency = clamp((Math.pow(performanceIndex, 0.75) / totalWatts / EFF_REF) * 100);
 
-  const airflow = (pcCase.includedFans + (fans?.count ?? 0));
+  const airflow = (pcCase?.includedFans ?? 0) + (fans?.count ?? 0);
   const thermal = clamp((coolRatio / 1.6) * 85 + Math.min(15, airflow * 2.5));
 
   const psuEff = clamp(((psu.efficiencyPct - 80) / 14) * 100);
   const psuLoad = clamp(((psu.wattage - totalWatts) / psu.wattage / 0.5) * 100);
   const thermHead = clamp(((coolRatio - 1) / 0.6) * 100);
-  const quiet = clamp(((40 - cooler.noiseDb) / 16) * 100);
-  const reliability = clamp(0.3 * psuEff + 0.3 * thermHead + 0.25 * psuLoad + 0.15 * quiet);
+  const quiet = clamp(((40 - (cooler ? cooler.noiseDb : 55)) / 16) * 100);
+  let reliability = clamp(0.3 * psuEff + 0.3 * thermHead + 0.25 * psuLoad + 0.15 * quiet);
+  if (!storage) reliability *= 0.8; // no boot disk
 
   const freeRam = clamp(((mobo.memorySlots - ram.modules) / mobo.memorySlots) * 100);
-  const freeM2 = clamp(((mobo.m2Slots - (storage.iface === 'NVMe' ? 1 : 0)) / mobo.m2Slots) * 100);
+  const freeM2 = mobo.m2Slots > 0 ? clamp(((mobo.m2Slots - (storage?.iface === 'NVMe' ? 1 : 0)) / mobo.m2Slots) * 100) : 0;
   const psuHead = clamp(((psu.wattage / Math.max(1, totalWatts) - 1) / 0.8) * 100);
-  const gpuClear = clamp(((pcCase.maxGpuLengthMm - gpu.dimensions.length) / pcCase.maxGpuLengthMm) * 200);
-  const fanRoom = clamp((pcCase.fanMounts / 10) * 100);
-  const scalability = clamp(0.25 * freeRam + 0.2 * freeM2 + 0.25 * psuHead + 0.15 * gpuClear + 0.15 * fanRoom);
+  const gpuClear = pcCase ? clamp(((pcCase.maxGpuLengthMm - (gpu?.dimensions.length ?? 0)) / pcCase.maxGpuLengthMm) * 200) : 55;
+  const fanRoom = pcCase ? clamp((pcCase.fanMounts / 10) * 100) : 0;
+  let scalability = clamp(0.25 * freeRam + 0.2 * freeM2 + 0.25 * psuHead + 0.15 * gpuClear + 0.15 * fanRoom);
+  if (!storage) scalability *= 0.7;
+  if (!pcCase) scalability *= 0.7; // open bench: no expansion/mounting
 
   const composite =
     WEIGHTS.performance * performance + WEIGHTS.value * value + WEIGHTS.efficiency * efficiency +

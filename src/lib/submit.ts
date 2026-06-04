@@ -25,11 +25,12 @@ export async function submitBuild(username: string, buildName: string, build: Bu
 
   const breakdown = runBenchmark(build);
   const ids = Object.fromEntries(Object.entries(build).map(([cat, c]) => [cat, c.id]));
-  const cpu = build.CPU!, gpu = build.GPU!;
+  const cpu = build.CPU!, gpu = build.GPU;
 
   const { error } = await supabase.from('builds').insert({
     username: uname, build_name: bname,
-    cpu_id: cpu.id, gpu_id: gpu.id, cpu_label: cpu.model, gpu_label: gpu.model,
+    cpu_id: cpu.id, gpu_id: gpu?.id ?? 'igpu',
+    cpu_label: cpu.model, gpu_label: gpu ? gpu.model : `${cpu.model} (iGPU)`,
     build_spec: ids, final_score: breakdown.finalScore, score_breakdown: breakdown,
     competition_id: competitionId ?? null,
   });
