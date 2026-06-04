@@ -166,8 +166,8 @@ export default function Builder() {
 
           {phase === 'failed' && (
             <>
-              <h2 className="danger">💥 Build Failed — it won't POST</h2>
-              <p className="muted small">The system shut down. Incompatibilities detected:</p>
+              <h2 className="danger">💥 This PC won't run</h2>
+              <p className="muted small">The power-on test stopped. Here's what's preventing the system from running:</p>
               <ul className="errors">{errors.map((e) => <li key={e.code}>{e.message}</li>)}</ul>
               <button className="btn primary wide" onClick={() => setPhase('building')}>← Fix the build</button>
             </>
