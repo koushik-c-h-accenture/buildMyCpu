@@ -4,6 +4,7 @@ import BuildScene from '../scene/BuildScene';
 import { useBuildStore } from '../store/buildStore';
 import { useCompStore } from '../store/compStore';
 import { getCompetition, countSubmissions, type Competition } from '../lib/competition';
+import ScoringDoc from '../components/ScoringDoc';
 import { byCategory } from '../data/catalog';
 import { CATEGORY_LABELS, CATEGORY_ORDER, OPTIONAL_CATEGORIES } from '../lib/types';
 import { postCheck, type RuleResult } from '../rules/compatibility';
@@ -44,6 +45,13 @@ export default function Builder() {
   const inComp = !!comp;
   const overBudget = inComp ? totals.price > comp!.budget_usd : false;
   const notStarted = inComp && comp!.status === 'lobby';
+
+  // Scoring/how-it-works popup. Auto-opens as the "waiting room" before the host starts.
+  const [scoringOpen, setScoringOpen] = useState(false);
+  const autoShown = useRef(false);
+  useEffect(() => {
+    if (notStarted && !autoShown.current) { setScoringOpen(true); autoShown.current = true; }
+  }, [notStarted]);
   const endMs = comp?.ends_at ? new Date(comp.ends_at).getTime() : 0;
   const timeLeft = inComp && comp!.status === 'running' && endMs ? Math.max(0, Math.floor((endMs - now) / 1000)) : null;
   const timerEnded = inComp && comp!.status !== 'lobby' && endMs ? endMs <= now : false;
@@ -85,7 +93,7 @@ export default function Builder() {
         <h1>🖥️ Build My PC</h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <Link className="btn" to="/">🏠 Home</Link>
-          <Link className="btn" to="/scoring">📊 Scoring</Link>
+          <button className="btn" onClick={() => setScoringOpen(true)}>📊 Scoring &amp; Rules</button>
           <Link className="btn" to={inComp ? `/board/${comp!.game_id}` : '/leaderboard'}>🏆 Leaderboard</Link>
         </div>
       </header>
@@ -246,6 +254,25 @@ export default function Builder() {
               </button>
             </div>
             {submitState.msg && <p className="muted" style={{ marginTop: 10 }}>{submitState.msg}</p>}
+          </div>
+        </div>
+      )}
+
+      {scoringOpen && (
+        <div className="modal-backdrop" onClick={() => setScoringOpen(false)}>
+          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-lg-head">
+              <h3>📊 Scoring &amp; How the Competition Works</h3>
+              <button className="btn ghost" onClick={() => setScoringOpen(false)}>✕ Close</button>
+            </div>
+            {inComp && notStarted && (
+              <div className="notice" style={{ margin: '0 0 14px' }}>
+                <strong>⏳ Waiting for the host to start the timer…</strong>
+                <p className="muted small">Read the rules &amp; scoring below while you wait. You can pre-plan
+                  your build now — close this anytime. When the host starts, the same countdown begins for everyone.</p>
+              </div>
+            )}
+            <ScoringDoc />
           </div>
         </div>
       )}
