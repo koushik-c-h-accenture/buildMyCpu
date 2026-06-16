@@ -1,8 +1,18 @@
 # Build My PC 🖥️
 
-A 3D PC-building simulator that runs in the browser. Assemble a PC from real-world
+A 3D PC-building simulator that runs in the browser. Assemble a PC from 385 real-world
 components, validate compatibility, boot it, run a simulated benchmark, and compete
 on a global leaderboard — no login required.
+
+**Highlights**
+- **Photoreal-ish real-time 3D:** studio lighting (image-based reflections), ACES tone
+  mapping, bloom on RGB lighting, tempered-glass case, animated fans + heat airflow.
+  Optional per-SKU GLB models drop in via a component's `modelUrl` (loader included).
+- **385 components, current market (2025-2026):** RTX 50-series, Radeon RX 9000, Intel
+  Core Ultra 200S (LGA1851), Ryzen 9000 / 9000X3D, DDR5-8000+, PCIe Gen5 SSDs, ATX 3.1 PSUs.
+- **Multi-currency:** USD, INR, EUR, GBP, AUD, CAD, SGD, AED, JPY, BRL (offline rates).
+- **Enterprise-grade competitions:** host a timed build-off (Game ID + PIN), budget caps,
+  per-user build/test limits, guided or raw part lists, host-revealed leaderboard.
 
 ## Architecture
 

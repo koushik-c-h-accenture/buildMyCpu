@@ -22,11 +22,21 @@ and compete on a global leaderboard (no login required).
 
 ## Tech stack
 - React 18 + TypeScript + Vite, React Three Fiber (Three.js) + drei, Zustand.
+- `@react-three/postprocessing` (Bloom + ACES tone mapping) for the realistic scene.
 - Supabase (Postgres + Edge Function) for the leaderboard.
 - `vite.config.ts` `base: '/buildMyCpu/'`; HashRouter (required for Pages SPA routing).
+  Bundle is code-split (`manualChunks`: three / r3f / vendor) — main app chunk ~160KB.
+- **Multi-currency:** prices are canonical USD in the catalog; `src/lib/currency.ts`
+  (+ `store/currencyStore.ts`, `components/CurrencyPicker.tsx`) converts to USD/INR/
+  EUR/GBP/AUD/CAD/SGD/AED/JPY/BRL with baked-in offline rates. Use `formatPrice` /
+  `formatCompact` everywhere a price is shown; never print a raw `$`.
 
 ## Architecture notes
 - **Components** are a bundled, typed catalog in `src/data/catalog.ts` (real dims/TDP).
+  385 parts across 9 categories incl. 2025-2026 latest gen (RTX 50 / RX 9000 /
+  Intel Core Ultra 200S on LGA1851 / Ryzen 9000 + 9000X3D / DDR5-8000+ / Gen5 SSDs /
+  ATX 3.1 PSUs). Every component can carry an optional `modelUrl` — when set, the
+  scene loads that real GLB via `scene/GlbModel.tsx` instead of the procedural mesh.
 - **Rules** in `src/rules/`: `compatibility.ts` (validation) + `benchmark.ts`
   (deterministic scoring: CPU+GPU × thermal × synergy × memory).
 - **Authoritative scoring:** client sends only component IDs to the
@@ -69,14 +79,23 @@ and compete on a global leaderboard (no login required).
   (`supabase/functions/analyze-build`, `src/lib/analyze.ts`) but is unwired/undeployed.
 - Claude Artifact single-file build (sandbox likely blocks Supabase → local leaderboard only).
 - buildmypc.in-style: product-card picker, save/share build URL, live PSU wattage meter.
-- Real GLB models / product images (currently detailed procedural meshes).
-- Code-split the ~1.29MB bundle (Three.js).
+- Real GLB models: loader is wired (`scene/GlbModel.tsx` + `modelUrl` field); drop in
+  CC-licensed `.glb` files (host under `public/models/`) and set `modelUrl` per part.
+  Procedural meshes are now PBR + studio-lit + bloom (see 3D scene notes).
+- Live FX rates / live component pricing (currently baked-in offline FX rates).
 
 ## 3D scene notes
 - `src/scene/parts.tsx` = procedural part meshes (Fan, Mobo, Cpu, Ram, Gpu, Psu,
-  Cooler air/AIO, Radiator, CaseShell). `S = 1/100` (mm→units).
-- `src/scene/BuildScene.tsx` = layout/placement anchored to case interior bounds
-  (motherboard tray on +X; camera views the open −X side), `Drop` entrance
-  animation, fan spin tied to `phase` ('testing' = fast). Validation is deferred:
-  no hints while building; full check fires on "Test & Benchmark" (phase machine
-  in `src/store/buildStore.ts`: building → testing → done | failed).
+  Cooler air/AIO, Radiator, Storage, Fans, CaseShell). `S = 1/100` (mm→units).
+  Realistic PBR: metallic IHS/fins/heatpipes, finned VRM/chipset heatsinks, RGB
+  emissive elements (`toneMapped={false}`, emissiveIntensity>1) so Bloom catches
+  them, `meshPhysicalMaterial` transmission for the tempered-glass side panel.
+  Each part renders `GlbModel` instead when its `modelUrl` is set.
+- `src/scene/BuildScene.tsx` = dark studio: self-contained `Environment` built from
+  `Lightformer`s (no external HDRI fetch), `<Canvas flat>` + `ToneMapping` ACES,
+  `EffectComposer` (Bloom + Vignette), `ContactShadows`, shadow-casting key light.
+  Layout anchored to case interior bounds (motherboard tray on +X; camera views the
+  open −X side), `Drop` entrance animation, fan spin tied to `phase`. GLB-loading
+  parts must stay inside the `<Suspense>` in `Rig`. Validation is deferred: no hints
+  while building; full check fires on "Power On & Test" (phase machine in
+  `src/store/buildStore.ts`: building → testing → done | failed).

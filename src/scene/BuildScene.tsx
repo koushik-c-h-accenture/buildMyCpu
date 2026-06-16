@@ -1,6 +1,8 @@
-import { useRef, type ReactNode } from 'react';
+import { Suspense, useRef, type ReactNode } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html, ContactShadows } from '@react-three/drei';
+import { OrbitControls, Html, ContactShadows, Environment, Lightformer } from '@react-three/drei';
+import { EffectComposer, Bloom, Vignette, ToneMapping } from '@react-three/postprocessing';
+import { ToneMappingMode } from 'postprocessing';
 import * as THREE from 'three';
 import type { Build, Case, Cooler } from '../lib/types';
 import { useBuildStore } from '../store/buildStore';
@@ -28,7 +30,7 @@ function Bench({ w, d, y }: { w: number; d: number; y: number }) {
   return (
     <mesh position={[0, y, 0]} receiveShadow>
       <boxGeometry args={[w * 1.05, 0.06, d * 1.05]} />
-      <meshStandardMaterial color="#5b6270" metalness={0.3} roughness={0.8} />
+      <meshStandardMaterial color="#23252c" metalness={0.5} roughness={0.6} />
     </mesh>
   );
 }
@@ -48,7 +50,6 @@ function Rig({ build }: { build: Build }) {
   const airHX = cooler ? cooler.dimensions.height * S : 0;
   const failed = phase === 'failed';
   const loading = phase === 'testing' || phase === 'done';
-  // airflow is driven by the fans actually present (case + extra + cooler fans)
   const coolerFans = cooler ? (isAir ? 1 : Math.round(cooler.radiatorSizeMm / 120)) : 0;
   const fanCount = (pcCase?.includedFans ?? 0) + ((build.FANS as any)?.count ?? 0) + coolerFans;
   const airflowSpeed = phase === 'testing' ? 3.2 : 1.6;
@@ -73,34 +74,66 @@ function Rig({ build }: { build: Build }) {
 
       {failed && <Burst />}
       {loading && fanCount > 0 && <Airflow extent={[hx, hy, hz]} fans={fanCount} speed={airflowSpeed} />}
-      {loading && <pointLight position={[boardX - 0.4, -0.4, 0.1]} color="#ff7a3c" intensity={1.6} distance={5} />}
+      {loading && <pointLight position={[boardX - 0.4, -0.4, 0.1]} color="#ff7a3c" intensity={2.4} distance={6} />}
     </group>
+  );
+}
+
+/** Self-contained studio lighting environment (no external HDRI fetch). */
+function Studio() {
+  return (
+    <Environment resolution={256} frames={1}>
+      <Lightformer form="rect" intensity={2.2} position={[0, 5, -6]} scale={[12, 7, 1]} color="#bcd3ff" />
+      <Lightformer form="rect" intensity={1.6} position={[-6, 2, 4]} rotation={[0, Math.PI / 3, 0]} scale={[7, 7, 1]} color="#ffffff" />
+      <Lightformer form="rect" intensity={1.3} position={[6, 2, 4]} rotation={[0, -Math.PI / 3, 0]} scale={[7, 7, 1]} color="#ffd9b8" />
+      <Lightformer form="ring" intensity={2.4} position={[0, -3, 2]} scale={5} color="#2f6df0" />
+    </Environment>
   );
 }
 
 export default function BuildScene({ build }: { build: Build }) {
   const empty = Object.keys(build).length === 0;
   return (
-    <Canvas shadows camera={{ position: [-5.5, 3.2, 5.5], fov: 42 }} style={{ background: '#eae8e2' }}>
-      <ambientLight intensity={1.0} />
-      <directionalLight position={[-6, 8, 6]} intensity={1.5} castShadow shadow-mapSize={[1024, 1024]} />
-      <directionalLight position={[4, 4, -3]} intensity={0.6} color="#6c8efe" />
-      <pointLight position={[-3, 1, 4]} intensity={0.7} color="#f38ba8" />
+    <Canvas
+      flat
+      shadows
+      dpr={[1, 2]}
+      camera={{ position: [-5.5, 3.2, 5.5], fov: 42 }}
+      gl={{ antialias: true, powerPreference: 'high-performance' }}
+    >
+      <color attach="background" args={['#0a0c12']} />
+      <fog attach="fog" args={['#0a0c12', 14, 30]} />
 
-      <Rig build={build} />
+      <ambientLight intensity={0.35} />
+      <directionalLight position={[-6, 9, 6]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001}>
+        <orthographicCamera attach="shadow-camera" args={[-8, 8, 8, -8, 0.1, 30]} />
+      </directionalLight>
+      <directionalLight position={[5, 4, -4]} intensity={0.8} color="#6c8efe" />
+      <pointLight position={[-3, 1, 5]} intensity={0.6} color="#f38ba8" />
 
-      {!empty && <ContactShadows position={[0, -2.4, 0]} opacity={0.35} scale={14} blur={2.5} far={5} />}
-      <gridHelper args={[16, 16, '#c9c2b3', '#dcd6c8']} position={[0, -2.42, 0]} />
+      <Suspense fallback={null}>
+        <Studio />
+        <Rig build={build} />
+      </Suspense>
+
+      {!empty && <ContactShadows position={[0, -2.4, 0]} opacity={0.55} scale={16} blur={2.8} far={6} resolution={1024} color="#000000" />}
+      <gridHelper args={[30, 30, '#1c2230', '#12161f']} position={[0, -2.42, 0]} />
 
       {empty && (
         <Html center zIndexRange={[20, 0]}>
-          <div style={{ color: '#6c7086', fontFamily: 'system-ui', fontSize: 14, whiteSpace: 'nowrap' }}>
+          <div style={{ color: '#9aa4b8', fontFamily: 'system-ui', fontSize: 14, whiteSpace: 'nowrap' }}>
             Start building — pick any components →
           </div>
         </Html>
       )}
 
-      <OrbitControls enablePan enableZoom enableDamping dampingFactor={0.08} minDistance={3} maxDistance={22} target={[0, 0, 0]} />
+      <OrbitControls enablePan enableZoom enableDamping dampingFactor={0.08} minDistance={3} maxDistance={24} target={[0, 0, 0]} />
+
+      <EffectComposer>
+        <Bloom mipmapBlur luminanceThreshold={1.05} luminanceSmoothing={0.2} intensity={0.7} radius={0.75} />
+        <Vignette offset={0.2} darkness={0.55} eskil={false} />
+        <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
+      </EffectComposer>
     </Canvas>
   );
 }

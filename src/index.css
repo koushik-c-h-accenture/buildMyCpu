@@ -173,3 +173,15 @@ code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
 .doc th { color: var(--muted); }
 .doc code { background: var(--panel2); padding: 1px 6px; border-radius: 4px; }
 .doc .formula { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; font-family: ui-monospace, monospace; font-size: 13px; white-space: pre-wrap; }
+
+/* currency picker (top bars) */
+.currency-picker {
+  background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 10px; font-size: 13px; cursor: pointer; font-weight: 600;
+}
+.currency-picker:hover { border-color: var(--accent); }
+.currency-picker:focus { outline: none; border-color: var(--accent); }
+
+/* dark studio viewport frame for the 3D scene */
+.viewport { background: radial-gradient(120% 100% at 50% 0%, #11141c 0%, #0a0c12 70%); }
+.viewport canvas { display: block; }
