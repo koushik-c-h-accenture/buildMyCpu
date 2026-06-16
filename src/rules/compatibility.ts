@@ -69,6 +69,14 @@ export function postCheck(b: Build): { fatal: RuleResult[]; warnings: RuleResult
   if (!pcCase) W('NO_CASE', 'No case (open-air bench) — the components run exposed with no chassis airflow, cable management, dust protection, or room to expand.');
   if (!gpu && cpu?.igpu) W('IGPU', `No dedicated GPU — relying on the ${cpu.model}'s integrated graphics. Fine for desktop work, but far too weak for serious gaming or GPU workloads.`);
 
+  // ---- warnings: tight physical clearances (it fits, but barely) ----
+  if (gpu && pcCase && gpu.dimensions.length <= pcCase.maxGpuLengthMm && gpu.dimensions.length > pcCase.maxGpuLengthMm - 15)
+    W('GPU_TIGHT', `Tight GPU clearance — the ${gpu.model} (${gpu.dimensions.length}mm) leaves under 15mm of room in the ${pcCase.model} (${pcCase.maxGpuLengthMm}mm max). It fits, but front-fan/cable space is cramped.`);
+  if (cooler && cooler.coolerType === 'Air' && pcCase && cooler.airHeightMm <= pcCase.maxCoolerHeightMm && cooler.airHeightMm > pcCase.maxCoolerHeightMm - 5)
+    W('COOLER_TIGHT', `Tight cooler clearance — the ${cooler.model} (${cooler.airHeightMm}mm) is within 5mm of the ${pcCase.model}'s ${pcCase.maxCoolerHeightMm}mm limit; the side panel may press against it.`);
+  if (cooler && cooler.coolerType === 'AIO' && pcCase && cooler.radiatorSizeMm >= 360 && Math.max(...pcCase.radiatorSupportMm) === cooler.radiatorSizeMm)
+    W('RAD_TIGHT', `Large radiator — the ${cooler.radiatorSizeMm}mm radiator is the biggest the ${pcCase.model} supports; expect a snug top/front mount with little tubing slack.`);
+
   return { fatal, warnings };
 }
 

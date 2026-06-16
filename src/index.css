@@ -185,3 +185,11 @@ code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
 /* dark studio viewport frame for the 3D scene */
 .viewport { background: radial-gradient(120% 100% at 50% 0%, #11141c 0%, #0a0c12 70%); }
 .viewport canvas { display: block; }
+
+/* airflow direction legend (overlaid on the 3D viewport during test/results) */
+.airflow-legend {
+  position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 5px;
+  padding: 9px 11px; background: rgba(10,12,18,0.62); border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px; color: #e7ecf5; font-size: 11px; backdrop-filter: blur(3px); pointer-events: none;
+}
+.airflow-legend .al-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }

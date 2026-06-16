@@ -194,6 +194,12 @@ export default function Builder() {
               <div className="muted small">CPU + GPU load, thermals, power delivery</div>
             </div>
           )}
+          {(phase === 'testing' || phase === 'done') && (
+            <div className="airflow-legend">
+              <span><i className="al-dot" style={{ background: '#37d2ff' }} /> Intake (front, cool)</span>
+              <span><i className="al-dot" style={{ background: '#ff8a3c' }} /> Exhaust (top / rear, warm)</span>
+            </div>
+          )}
         </main>
 
         <aside className="panel inspector">
@@ -266,7 +272,12 @@ export default function Builder() {
                       <li><span>GPU temp @ load</span><span className={rp.gpuTempC >= 84 ? 'hot' : ''}>{rp.gpuTempC}°C</span></li>
                       <li><span>Render index (FPS)</span><span>{rp.fpsIndex}</span></li>
                       <li><span>Power draw @ load</span><span>{rp.powerDrawW} W</span></li>
-                      <li><span>Active airflow fans</span><span>{rp.airflowFans}</span></li>
+                      <li><span>Airflow (intake → exhaust)</span><span>{rp.intakeFans} in · {rp.exhaustFans} out</span></li>
+                      <li><span>Case pressure</span>
+                        <span className={rp.pressure === 'negative' ? 'hot' : ''}>
+                          {rp.pressure === 'positive' ? '⊕ Positive' : rp.pressure === 'negative' ? '⊖ Negative' : '◎ Balanced'}
+                        </span>
+                      </li>
                     </ul>
                   </>
                 );
