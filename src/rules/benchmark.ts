@@ -1,5 +1,6 @@
 import type { Build, Case, Cooler, Cpu, Gpu, Mobo, Psu, Ram, Storage, Fans } from '../lib/types';
 import { isBuildValid, totalSystemDraw } from './compatibility';
+import { airflowPlan } from './airflow';
 
 export interface ScoreBreakdown {
   // raw
@@ -35,6 +36,9 @@ export interface StressReport {
   fpsIndex: number;
   powerDrawW: number;
   airflowFans: number;
+  intakeFans: number;
+  exhaustFans: number;
+  pressure: 'positive' | 'negative' | 'balanced';
 }
 
 /**
@@ -48,6 +52,7 @@ export function stressReport(b: Build): StressReport {
   const pcCase = b.CASE as Case | undefined;
   const fans = b.FANS as Fans | undefined;
   const airflowFans = (pcCase?.includedFans ?? 0) + (fans?.count ?? 0);
+  const plan = airflowPlan(b);
 
   const coolerDiss = cooler ? cooler.dissipationWatts : 12;
   const coolRatio = coolerDiss / Math.max(1, cpu.tdpWatts);
@@ -65,6 +70,9 @@ export function stressReport(b: Build): StressReport {
     fpsIndex: gpu ? Math.round(gpu.benchBase * (gpu.vramGb / 8 + 1) * 14) : Math.round(cpu.benchBase * 5),
     powerDrawW: totalSystemDraw(b),
     airflowFans,
+    intakeFans: plan.intake,
+    exhaustFans: plan.exhaust,
+    pressure: plan.pressure,
   };
 }
 

@@ -8,8 +8,9 @@ import type { Build, Case, Cooler } from '../lib/types';
 import { useBuildStore } from '../store/buildStore';
 import {
   CaseShell, MoboPart, CpuPart, RamPart, GpuPart, PsuPart, CoolerPart, RadiatorPart,
-  StoragePart, FansPart, Burst, Airflow, S,
+  StoragePart, FansPart, Burst, Airflow, Vents, S,
 } from './parts';
+import { airflowPlan } from '../rules/airflow';
 
 /** Slides a part down into place when it first mounts (easeOutCubic). */
 function Drop({ to, children }: { to: [number, number, number]; children: ReactNode }) {
@@ -50,8 +51,10 @@ function Rig({ build }: { build: Build }) {
   const airHX = cooler ? cooler.dimensions.height * S : 0;
   const failed = phase === 'failed';
   const loading = phase === 'testing' || phase === 'done';
-  const coolerFans = cooler ? (isAir ? 1 : Math.round(cooler.radiatorSizeMm / 120)) : 0;
-  const fanCount = (pcCase?.includedFans ?? 0) + ((build.FANS as any)?.count ?? 0) + coolerFans;
+  const plan = airflowPlan(build);
+  const radFans = cooler && !isAir ? Math.round(cooler.radiatorSizeMm / 120) : 0;
+  const exhaustTop = radFans;
+  const exhaustRear = Math.max(0, plan.exhaust - radFans);
   const airflowSpeed = phase === 'testing' ? 3.2 : 1.6;
 
   return (
@@ -73,7 +76,12 @@ function Rig({ build }: { build: Build }) {
       )}
 
       {failed && <Burst />}
-      {loading && fanCount > 0 && <Airflow extent={[hx, hy, hz]} fans={fanCount} speed={airflowSpeed} />}
+      {loading && plan.total > 0 && (
+        <Airflow extent={[hx, hy, hz]} intake={plan.intake} exhaust={plan.exhaust} speed={airflowSpeed} />
+      )}
+      {loading && plan.total > 0 && (
+        <Vents extent={[hx, hy, hz]} intake={plan.intake} exhaustTop={exhaustTop} exhaustRear={exhaustRear} />
+      )}
       {loading && <pointLight position={[boardX - 0.4, -0.4, 0.1]} color="#ff7a3c" intensity={2.4} distance={6} />}
     </group>
   );
@@ -104,12 +112,15 @@ export default function BuildScene({ build }: { build: Build }) {
       <color attach="background" args={['#0a0c12']} />
       <fog attach="fog" args={['#0a0c12', 14, 30]} />
 
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[-6, 9, 6]} intensity={2.4} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001}>
+      <ambientLight intensity={0.7} />
+      <hemisphereLight args={['#dfe8ff', '#2a2e38', 0.6]} />
+      <directionalLight position={[-6, 9, 6]} intensity={2.6} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001}>
         <orthographicCamera attach="shadow-camera" args={[-8, 8, 8, -8, 0.1, 30]} />
       </directionalLight>
-      <directionalLight position={[5, 4, -4]} intensity={0.8} color="#6c8efe" />
-      <pointLight position={[-3, 1, 5]} intensity={0.6} color="#f38ba8" />
+      <directionalLight position={[5, 4, -4]} intensity={0.9} color="#7c9bff" />
+      {/* camera/glass-side fill so interior components read clearly */}
+      <pointLight position={[-4, 1.5, 4]} intensity={1.1} color="#eef3ff" distance={20} />
+      <pointLight position={[-2, -0.5, 2]} intensity={0.5} color="#cfe0ff" distance={12} />
 
       <Suspense fallback={null}>
         <Studio />
@@ -130,8 +141,8 @@ export default function BuildScene({ build }: { build: Build }) {
       <OrbitControls enablePan enableZoom enableDamping dampingFactor={0.08} minDistance={3} maxDistance={24} target={[0, 0, 0]} />
 
       <EffectComposer>
-        <Bloom mipmapBlur luminanceThreshold={1.05} luminanceSmoothing={0.2} intensity={0.7} radius={0.75} />
-        <Vignette offset={0.2} darkness={0.55} eskil={false} />
+        <Bloom mipmapBlur luminanceThreshold={1.1} luminanceSmoothing={0.2} intensity={0.6} radius={0.7} />
+        <Vignette offset={0.25} darkness={0.32} eskil={false} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       </EffectComposer>
     </Canvas>

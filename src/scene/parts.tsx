@@ -32,11 +32,15 @@ export function Fan({ radius = 0.45, color = '#15151b', glow = '#26e0ff', frame 
   const n = 9;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
+    // group rotates the blade around the hub; inner mesh is pitched (tilted) on
+    // its radial axis so it visibly "scoops" air — like a real fan blade.
     blades.push(
-      <mesh key={i} rotation={[0, 0, a]} position={[Math.cos(a) * radius * 0.5, Math.sin(a) * radius * 0.5, 0]}>
-        <boxGeometry args={[radius * 0.66, radius * 0.34, radius * 0.06]} />
-        <meshStandardMaterial color={color} metalness={0.1} roughness={0.55} transparent opacity={0.92} />
-      </mesh>,
+      <group key={i} rotation={[0, 0, a]}>
+        <mesh position={[radius * 0.52, 0, 0]} rotation={[0.55, 0, 0]}>
+          <boxGeometry args={[radius * 0.6, radius * 0.34, radius * 0.05]} />
+          <meshStandardMaterial color={color} metalness={0.15} roughness={0.5} transparent opacity={0.9} />
+        </mesh>
+      </group>,
     );
   }
   const s = radius * 2.18; // square frame size
@@ -95,8 +99,8 @@ export function MoboPart({ c }: { c: Mobo }) {
   const d = c.dimensions.length * S; // 305 -> Z
   return (
     <group>
-      {/* dark PCB with subtle sheen */}
-      <Box size={[0.07, h, d]} color="#10241c" metalness={0.25} roughness={0.62} edges="#0a1812" env={0.6} />
+      {/* PCB with subtle sheen (lightened for visibility) */}
+      <Box size={[0.07, h, d]} color="#1f5240" metalness={0.18} roughness={0.62} edges="#123026" env={0.9} />
       {/* RGB accent stripe along the edge */}
       <mesh position={[-0.045, h * 0.46, 0]}>
         <boxGeometry args={[0.015, 0.05, d * 0.92]} />
@@ -440,38 +444,114 @@ export function Burst() {
 }
 
 /**
- * Airflow streaks. Density scales with the number of fans; streaks flow
- * front→back (intake→exhaust) and rise as they pass the CPU/cooler — picking up
- * heat (cool blue intake → warm orange exhaust).
+ * Airflow streaks following the real intake→exhaust path: air enters the FRONT
+ * (−Z) low, flows toward the REAR (+Z) while rising (+Y) as it picks up heat from
+ * the CPU/GPU, and leaves at the rear/top. Colour ramps cool-blue (intake) →
+ * warm-orange (exhaust). Density scales with how many fans are moving air.
  */
-export function Airflow({ extent, fans, speed }: { extent: [number, number, number]; fans: number; speed: number }) {
+export function Airflow({ extent, intake, exhaust, speed }:
+  { extent: [number, number, number]; intake: number; exhaust: number; speed: number }) {
+  const [hx, hy, hz] = extent;
   const ref = useRef<THREE.Group>(null);
-  const n = Math.max(0, Math.min(24, fans * 2));
+  const n = Math.max(6, Math.min(42, (intake + exhaust + 2) * 3));
+  const respawn = (m: THREE.Object3D) => {
+    m.position.set(
+      (Math.random() - 0.4) * hx * 1.1,            // bias toward the camera/glass side
+      -hy * 0.7 + Math.random() * hy * 0.5,        // enter low (intake height)
+      -hz + Math.random() * 0.1,                   // at the front face
+    );
+  };
   useFrame((_, dt) => {
     if (!ref.current) return;
     ref.current.children.forEach((m) => {
-      m.position.z -= dt * speed;
-      m.position.y += dt * speed * 0.12;
+      const heatZone = 1 - Math.min(1, Math.abs(m.position.z) / (hz * 0.7)); // hottest mid-case
+      m.position.z += dt * speed;
+      m.position.y += dt * speed * (0.18 + heatZone * 0.4);                  // buoyant rise over hot parts
+      const progress = THREE.MathUtils.clamp((m.position.z + hz) / (2 * hz), 0, 1);
+      const height = THREE.MathUtils.clamp((m.position.y + hy) / (2 * hy), 0, 1);
+      const warmth = THREE.MathUtils.clamp(progress * 0.7 + height * 0.5, 0, 1);
       const mat = (m as THREE.Mesh).material as THREE.MeshBasicMaterial;
-      const warmth = THREE.MathUtils.clamp((extent[2] - m.position.z) / (extent[2] * 2), 0, 1);
-      mat.color.setRGB(0.04 + warmth * 0.96, 0.52 - warmth * 0.2, 1 - warmth * 0.8);
-      if (m.position.z < -extent[2]) {
-        m.position.z = extent[2];
-        m.position.x = (Math.random() - 0.5) * extent[0] * 1.2;
-        m.position.y = -extent[1] * 0.6 + Math.random() * extent[1] * 0.6;
-      }
+      mat.color.setRGB(0.05 + warmth * 0.95, 0.55 - warmth * 0.25, 1 - warmth * 0.82);
+      if (m.position.z > hz * 0.96 || m.position.y > hy * 0.95) respawn(m);
     });
   });
   const streaks = [];
   for (let i = 0; i < n; i++) {
     streaks.push(
-      <mesh key={i} position={[(Math.random() - 0.5) * extent[0] * 1.2, -extent[1] * 0.6 + Math.random() * extent[1] * 1.4, (Math.random() - 0.5) * extent[2] * 2]}>
-        <planeGeometry args={[0.05, 0.6]} />
+      <mesh key={i} position={[(Math.random() - 0.4) * hx * 1.1, -hy * 0.7 + Math.random() * hy * 1.5, -hz + Math.random() * 2 * hz]}>
+        <planeGeometry args={[0.045, 0.55]} />
         <meshBasicMaterial color="#0a86ff" transparent opacity={0.5} side={THREE.DoubleSide} toneMapped={false} />
       </mesh>,
     );
   }
   return <group ref={ref}>{streaks}</group>;
+}
+
+/** A drifting column of arrow glyphs showing airflow direction at a vent. */
+function ArrowStream({ base, axis, color, span, count = 3, size = 0.07 }:
+  { base: [number, number, number]; axis: 'z' | 'y'; color: string; span: number; count?: number; size?: number }) {
+  const ref = useRef<THREE.Group>(null);
+  const t = useRef(0);
+  const rot: [number, number, number] = axis === 'z' ? [Math.PI / 2, 0, 0] : [0, 0, 0];
+  useFrame((_, dt) => {
+    if (!ref.current) return;
+    const phase = useBuildStore.getState().phase;
+    const v = phase === 'testing' ? 1.1 : phase === 'done' ? 0.55 : 0.22;
+    t.current += dt * v;
+    ref.current.children.forEach((m, i) => {
+      const p = ((t.current + (i / count) * span) % span);
+      if (axis === 'z') m.position.set(base[0], base[1], base[2] + p);
+      else m.position.set(base[0], base[1] + p, base[2]);
+      const fade = Math.sin((p / span) * Math.PI);
+      m.scale.setScalar(0.55 + 0.45 * fade);
+    });
+  });
+  return (
+    <group ref={ref}>
+      {Array.from({ length: count }).map((_, i) => (
+        <mesh key={i} rotation={rot}>
+          <coneGeometry args={[size, size * 1.8, 10]} />
+          <meshBasicMaterial color={color} transparent opacity={0.85} toneMapped={false} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Visualises the computed intake / exhaust vents on the case faces:
+ *   • cyan arrows at the FRONT pushing in (intake),
+ *   • warm arrows at the TOP and REAR pushing out (exhaust).
+ * Column counts mirror the actual fan distribution from the airflow plan.
+ */
+export function Vents({ extent, intake, exhaustTop, exhaustRear }:
+  { extent: [number, number, number]; intake: number; exhaustTop: number; exhaustRear: number }) {
+  const [hx, hy, hz] = extent;
+  const intakeCols = Math.max(1, Math.min(4, intake));
+  const topCols = Math.min(4, exhaustTop);
+  const rearCols = Math.max(intake > 0 ? 1 : 0, Math.min(3, exhaustRear));
+  const cyan = '#37d2ff', warm = '#ff8a3c';
+  const spread = (k: number, total: number, range: number) =>
+    total <= 1 ? 0 : (-range / 2 + (range * k) / (total - 1));
+  return (
+    <group>
+      {/* INTAKE — front face (−Z), arrows pointing into the case (+Z) */}
+      {Array.from({ length: intakeCols }).map((_, k) => (
+        <ArrowStream key={`in${k}`} axis="z" color={cyan} span={Math.min(1.0, hz * 0.9)}
+          base={[-hx * 0.25 + spread(k, intakeCols, hx * 0.8), -hy * 0.5, -hz + 0.08]} />
+      ))}
+      {/* EXHAUST — top face (+Y), arrows pointing up/out */}
+      {Array.from({ length: topCols }).map((_, k) => (
+        <ArrowStream key={`top${k}`} axis="y" color={warm} span={Math.min(0.8, hy * 0.5)}
+          base={[-hx * 0.1, hy * 0.6, spread(k, topCols, hz * 1.2)]} />
+      ))}
+      {/* EXHAUST — rear face (+Z), arrows pointing out (+Z) */}
+      {Array.from({ length: rearCols }).map((_, k) => (
+        <ArrowStream key={`rear${k}`} axis="z" color={warm} span={Math.min(0.8, hz * 0.6)}
+          base={[-hx * 0.25 + spread(k, rearCols, hx * 0.6), hy * 0.45, hz - 0.5]} />
+      ))}
+    </group>
+  );
 }
 
 export function CaseShell({ c }: { c: Case }) {
@@ -487,10 +567,10 @@ export function CaseShell({ c }: { c: Case }) {
         <meshStandardMaterial color="#101015" transparent opacity={0.03} side={THREE.BackSide} />
         <Edges color="#3a3f4a" />
       </mesh>
-      {/* motherboard tray (back panel, +X) */}
+      {/* motherboard tray (back panel, +X) — lighter for component contrast */}
       <mesh position={[w / 2 - 0.02, 0, 0]} receiveShadow>
         <boxGeometry args={[0.04, h * 0.98, d * 0.98]} />
-        <meshStandardMaterial color="#16181d" metalness={0.4} roughness={0.7} />
+        <meshStandardMaterial color="#333a45" metalness={0.3} roughness={0.78} envMapIntensity={0.8} />
       </mesh>
       {/* top panel */}
       <mesh position={[0, h / 2 - 0.02, 0]}>
@@ -507,12 +587,12 @@ export function CaseShell({ c }: { c: Case }) {
         <boxGeometry args={[w * 0.9, 0.9, d * 0.6]} />
         <meshStandardMaterial color="#1a1b21" metalness={0.4} roughness={0.65} />
       </mesh>
-      {/* tempered-glass side panel (camera side, -X) */}
+      {/* tempered-glass side panel (camera side, -X) — clearer so parts read */}
       <mesh position={[-w / 2 + 0.02, 0, 0]}>
-        <boxGeometry args={[0.025, h * 0.95, d * 0.95]} />
+        <boxGeometry args={[0.02, h * 0.95, d * 0.95]} />
         <meshPhysicalMaterial
-          color="#9fc7e8" transparent opacity={0.16} roughness={0.04} metalness={0}
-          transmission={0.92} thickness={0.4} ior={1.5} reflectivity={0.5} side={THREE.DoubleSide}
+          color="#cfe2f2" transparent opacity={0.08} roughness={0.03} metalness={0}
+          transmission={0.96} thickness={0.25} ior={1.45} reflectivity={0.35} side={THREE.DoubleSide}
         />
       </mesh>
       {/* front mesh panel (-Z) */}
