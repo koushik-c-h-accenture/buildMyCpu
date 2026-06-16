@@ -577,16 +577,31 @@ export function CaseShell({ c }: { c: Case }) {
         <boxGeometry args={[w * 0.98, 0.04, d * 0.98]} />
         <meshStandardMaterial color={frame} metalness={0.5} roughness={0.6} />
       </mesh>
-      {/* bottom PSU shroud */}
+      {/* bottom floor */}
       <mesh position={[0, -h / 2 + 0.02, 0]} receiveShadow>
         <boxGeometry args={[w * 0.98, 0.04, d * 0.98]} />
         <meshStandardMaterial color="#14151a" metalness={0.4} roughness={0.7} />
       </mesh>
-      {/* shroud cover over PSU bay */}
-      <mesh position={[0, -h / 2 + 0.5, 0]}>
-        <boxGeometry args={[w * 0.9, 0.9, d * 0.6]} />
-        <meshStandardMaterial color="#1a1b21" metalness={0.4} roughness={0.65} />
-      </mesh>
+      {/* PSU shroud / basement cover — full-depth ledge that hides the PSU + cables */}
+      <group position={[0, -h / 2 + 0.27, 0]}>
+        <mesh receiveShadow castShadow>
+          <boxGeometry args={[w * 0.94, 0.44, d * 0.92]} />
+          <meshStandardMaterial color="#1c1e25" metalness={0.45} roughness={0.6} />
+          <Edges color="#2c3340" />
+        </mesh>
+        {/* cable-routing grommet cutouts on the shroud top */}
+        {[-0.22, 0.16].map((zf, i) => (
+          <mesh key={i} position={[w * 0.26, 0.225, zf * d]}>
+            <boxGeometry args={[0.16, 0.02, 0.5]} />
+            <meshStandardMaterial color="#0a0a0e" metalness={0.3} roughness={0.85} />
+          </mesh>
+        ))}
+        {/* subtle accent stripe so it reads as a finished cover, not a blank slab */}
+        <mesh position={[-w * 0.05, 0.222, -d * 0.2]}>
+          <boxGeometry args={[w * 0.55, 0.012, 0.05]} />
+          <meshStandardMaterial color="#2f6df0" emissive="#2f6df0" emissiveIntensity={0.7} toneMapped={false} />
+        </mesh>
+      </group>
       {/* tempered-glass side panel (camera side, -X) — clearer so parts read */}
       <mesh position={[-w / 2 + 0.02, 0, 0]}>
         <boxGeometry args={[0.02, h * 0.95, d * 0.95]} />
