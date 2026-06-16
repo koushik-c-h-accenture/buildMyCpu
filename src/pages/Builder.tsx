@@ -10,6 +10,9 @@ import { CATEGORY_LABELS, CATEGORY_ORDER, OPTIONAL_CATEGORIES } from '../lib/typ
 import { postCheck, compatibleParts, type RuleResult } from '../rules/compatibility';
 import { runBenchmark, stressReport } from '../rules/benchmark';
 import { submitBuild } from '../lib/submit';
+import { useCurrencyStore } from '../store/currencyStore';
+import { formatPrice, formatCompact } from '../lib/currency';
+import CurrencyPicker from '../components/CurrencyPicker';
 
 const SUBSCORES = [
   ['performance', '🚀 Performance'], ['value', '💲 Value'], ['efficiency', '⚡ Efficiency'],
@@ -25,6 +28,7 @@ export default function Builder() {
     build, activeCategory, setActiveCategory, setComponent, removeComponent,
     result, setResult, phase, setPhase, errors, setErrors, reset,
   } = useBuildStore();
+  const currency = useCurrencyStore((s) => s.currency);
 
   const totals = useMemo(() => {
     let price = 0, watts = 0;
@@ -81,7 +85,7 @@ export default function Builder() {
   const submitBlockReason = !inComp ? '' :
     notStarted ? 'Waiting for the host to start the timer' :
     timerEnded ? 'Time is up — submissions closed' :
-    overBudget ? `Over budget by $${(totals.price - comp!.budget_usd).toLocaleString()}` :
+    overBudget ? `Over budget by ${formatPrice(totals.price - comp!.budget_usd, currency)}` :
     limitReached ? `Submission limit reached (${comp!.max_submissions})` : '';
 
   const [warns, setWarns] = useState<RuleResult[]>([]);
@@ -117,7 +121,8 @@ export default function Builder() {
     <div className="builder">
       <header className="topbar">
         <h1>🖥️ Build My PC</h1>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <CurrencyPicker />
           <Link className="btn" to="/">🏠 Home</Link>
           <button className="btn" onClick={() => setScoringOpen(true)}>📊 Scoring &amp; Rules</button>
           <Link className="btn" to={inComp ? `/board/${comp!.game_id}` : '/leaderboard'}>🏆 Leaderboard</Link>
@@ -127,7 +132,7 @@ export default function Builder() {
       {inComp && comp && (
         <div className="compbar">
           <span>🎮 <b>{comp.name}</b> · {comp.game_id}</span>
-          <span className={overBudget ? 'over' : ''}>💰 ${totals.price.toLocaleString()} / ${comp.budget_usd.toLocaleString()}</span>
+          <span className={overBudget ? 'over' : ''}>💰 {formatPrice(totals.price, currency)} / {formatPrice(comp.budget_usd, currency)}</span>
           <span>⏱ {notStarted ? 'waiting for host' : timerEnded ? 'ENDED' : timeLeft != null ? `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')}` : '—'}</span>
           <span>📤 {subCount}/{comp.max_submissions} builds</span>
           <span>🧪 {maxTests > 0 ? `${testsUsed}/${maxTests} tests` : '∞ tests'}</span>
@@ -172,7 +177,7 @@ export default function Builder() {
                   onClick={() => (selected ? removeComponent(activeCategory) : setComponent(p))}>
                   <span className="dot" style={{ background: p.color }} />
                   <span className="part-name">{p.brand} {p.model}</span>
-                  <span className="part-meta">${p.priceUsd}{p.tdpWatts ? ` · ${p.tdpWatts}W` : ''}</span>
+                  <span className="part-meta">{formatCompact(p.priceUsd, currency)}{p.tdpWatts ? ` · ${p.tdpWatts}W` : ''}</span>
                 </button>
               );
             })}
@@ -204,7 +209,7 @@ export default function Builder() {
                 ))}
               </ul>
               <div className="totals">
-                <div><span className="muted">Total cost</span><strong>${totals.price.toLocaleString()}</strong></div>
+                <div><span className="muted">Total cost</span><strong>{formatPrice(totals.price, currency)}</strong></div>
                 <div><span className="muted">Est. power</span><strong>{totals.watts} W</strong></div>
               </div>
               <button className="btn primary wide" disabled={testsExhausted} onClick={runTest}>🔌 Power On &amp; Test</button>
@@ -247,7 +252,7 @@ export default function Builder() {
                 <li><span>Performance Index</span><span>{result.performanceIndex.toLocaleString()}</span></li>
                 <li><span>Perf / Watt</span><span>{result.perfPerWatt}</span></li>
                 <li><span>Perf / $</span><span>{result.perfPerDollar}</span></li>
-                <li><span>Total cost</span><span>${result.totalPrice.toLocaleString()}</span></li>
+                <li><span>Total cost</span><span>{formatPrice(result.totalPrice, currency)}</span></li>
                 <li><span>Build weight</span><span>{result.totalWeightKg} kg</span></li>
               </ul>
               {(() => {

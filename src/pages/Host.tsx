@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getCompetition, startCompetition, setReveal, type Competition } from '../lib/competition';
 import { supabase } from '../lib/supabase';
+import { useCurrencyStore } from '../store/currencyStore';
+import { formatPrice } from '../lib/currency';
+import CurrencyPicker from '../components/CurrencyPicker';
 
 function useCountdown(endsAt: string | null) {
   const [left, setLeft] = useState(0);
@@ -15,6 +18,7 @@ function useCountdown(endsAt: string | null) {
 
 export default function Host() {
   const { gameId = '' } = useParams();
+  const currency = useCurrencyStore((s) => s.currency);
   const [comp, setComp] = useState<Competition | null>(null);
   const [pin, setPin] = useState('');
   const [msg, setMsg] = useState('');
@@ -41,12 +45,14 @@ export default function Host() {
 
   return (
     <div className="page">
-      <header className="topbar"><h1>🎛️ Host Console — {comp.name}</h1><Link className="btn" to="/">← Home</Link></header>
+      <header className="topbar"><h1>🎛️ Host Console — {comp.name}</h1>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><CurrencyPicker /><Link className="btn" to="/">← Home</Link></div>
+      </header>
       <div className="home"><div className="card">
         <div className="gameid">{comp.game_id}</div>
         <ul className="summary">
           <li><span className="muted">Status</span><span><b>{comp.status.toUpperCase()}</b></span></li>
-          <li><span className="muted">Budget</span><span>${comp.budget_usd.toLocaleString()}</span></li>
+          <li><span className="muted">Budget</span><span>{formatPrice(comp.budget_usd, currency)}</span></li>
           <li><span className="muted">Timer</span><span>{comp.duration_min} min</span></li>
           <li><span className="muted">Max builds / user</span><span>{comp.max_submissions}</span></li>
           <li><span className="muted">Max tests / user</span><span>{comp.max_tests ? comp.max_tests : 'Unlimited'}</span></li>

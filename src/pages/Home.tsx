@@ -4,6 +4,9 @@ import { createCompetition, getCompetition } from '../lib/competition';
 import { useCompStore } from '../store/compStore';
 import { supabase } from '../lib/supabase';
 import { SUPABASE_URL } from '../config';
+import { useCurrencyStore } from '../store/currencyStore';
+import { fromUsd, toUsd, getCurrency } from '../lib/currency';
+import CurrencyPicker from '../components/CurrencyPicker';
 
 const PROJECT_REF = SUPABASE_URL.match(/https:\/\/([^.]+)/)?.[1] ?? '';
 const SQL_EDITOR = `https://supabase.com/dashboard/project/${PROJECT_REF}/sql/new`;
@@ -11,6 +14,8 @@ const SQL_EDITOR = `https://supabase.com/dashboard/project/${PROJECT_REF}/sql/ne
 export default function Home() {
   const nav = useNavigate();
   const { setSession, clear } = useCompStore();
+  const currency = useCurrencyStore((s) => s.currency);
+  const cur = getCurrency(currency);
   const [tab, setTab] = useState<'join' | 'host'>('join');
   const [setupOk, setSetupOk] = useState<boolean | null>(null);
   useEffect(() => {
@@ -52,7 +57,10 @@ export default function Home() {
     <div className="page">
       <header className="topbar">
         <h1>🖥️ Build My PC — Competition Arena</h1>
-        <button className="btn" onClick={() => { clear(); nav('/build'); }}>🛠️ Practice (free build)</button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <CurrencyPicker />
+          <button className="btn" onClick={() => { clear(); nav('/build'); }}>🛠️ Practice (free build)</button>
+        </div>
       </header>
 
       <div className="home">
@@ -90,7 +98,7 @@ export default function Home() {
                 <h2>Create a Competition</h2>
                 <label>Competition name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Q3 Build-Off" maxLength={40} /></label>
                 <div className="row2">
-                  <label>Budget ($)<input type="number" value={budget} min={300} step={50} onChange={(e) => setBudget(+e.target.value)} /></label>
+                  <label>Budget ({cur.symbol} {cur.code})<input type="number" value={Math.round(fromUsd(budget, currency))} min={Math.round(fromUsd(300, currency))} step={Math.max(1, Math.round(fromUsd(50, currency)))} onChange={(e) => setBudget(Math.round(toUsd(+e.target.value, currency)))} /></label>
                   <label>Timer (min)<input type="number" value={duration} min={1} max={180} onChange={(e) => setDuration(+e.target.value)} /></label>
                 </div>
                 <div className="row2">

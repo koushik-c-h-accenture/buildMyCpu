@@ -33,6 +33,10 @@ export interface BaseComponent {
   color: string;
   /** Base performance multiplier feeding the benchmark. */
   benchBase: number;
+  /** Optional URL to a real glTF/GLB model. When set, the 3D scene loads it
+   *  instead of the procedural mesh (see scene/GlbModel). Lets genuine per-SKU
+   *  models be dropped in over time without touching scene code. */
+  modelUrl?: string;
   /** Approx mass in grams (used for the build-weight metric). */
   weightG?: number;
   /** Reliability proxy 0-1 (build quality / MTBF tier). */
