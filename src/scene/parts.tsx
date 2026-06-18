@@ -559,6 +559,7 @@ export function CaseShell({ c }: { c: Case }) {
   const h = c.dimensions.height * S;
   const d = c.dimensions.length * S;
   const frame = '#0d0d11';
+  const shroudH = Math.max(0.26, h * 0.15);   // basement-cover height scales with the case
   return (
     <group>
       {/* steel frame edges */}
@@ -582,25 +583,21 @@ export function CaseShell({ c }: { c: Case }) {
         <boxGeometry args={[w * 0.98, 0.04, d * 0.98]} />
         <meshStandardMaterial color="#14151a" metalness={0.4} roughness={0.7} />
       </mesh>
-      {/* PSU shroud / basement cover — full-depth ledge that hides the PSU + cables */}
-      <group position={[0, -h / 2 + 0.27, 0]}>
+      {/* PSU shroud / basement cover — full-depth ledge that hides the PSU + cables.
+          Height scales with the case; no decorative glow so it reads as a plain cover. */}
+      <group position={[0, -h / 2 + 0.04 + shroudH / 2, 0]}>
         <mesh receiveShadow castShadow>
-          <boxGeometry args={[w * 0.94, 0.44, d * 0.92]} />
-          <meshStandardMaterial color="#1c1e25" metalness={0.45} roughness={0.6} />
-          <Edges color="#2c3340" />
+          <boxGeometry args={[w * 0.94, shroudH, d * 0.92]} />
+          <meshStandardMaterial color="#202530" metalness={0.35} roughness={0.65} envMapIntensity={0.7} />
+          <Edges color="#333b48" />
         </mesh>
-        {/* cable-routing grommet cutouts on the shroud top */}
-        {[-0.22, 0.16].map((zf, i) => (
-          <mesh key={i} position={[w * 0.26, 0.225, zf * d]}>
-            <boxGeometry args={[0.16, 0.02, 0.5]} />
-            <meshStandardMaterial color="#0a0a0e" metalness={0.3} roughness={0.85} />
+        {/* recessed cable pass-through cutouts on the shroud top */}
+        {[-0.24, 0.18].map((zf, i) => (
+          <mesh key={i} position={[w * 0.24, shroudH / 2 - 0.012, zf * d]}>
+            <boxGeometry args={[0.16, 0.05, 0.5]} />
+            <meshStandardMaterial color="#070709" metalness={0.2} roughness={0.95} />
           </mesh>
         ))}
-        {/* subtle accent stripe so it reads as a finished cover, not a blank slab */}
-        <mesh position={[-w * 0.05, 0.222, -d * 0.2]}>
-          <boxGeometry args={[w * 0.55, 0.012, 0.05]} />
-          <meshStandardMaterial color="#2f6df0" emissive="#2f6df0" emissiveIntensity={0.7} toneMapped={false} />
-        </mesh>
       </group>
       {/* tempered-glass side panel (camera side, -X) — clearer so parts read */}
       <mesh position={[-w / 2 + 0.02, 0, 0]}>
