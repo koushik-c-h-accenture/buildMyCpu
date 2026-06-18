@@ -13,6 +13,7 @@ import { submitBuild } from '../lib/submit';
 import { useCurrencyStore } from '../store/currencyStore';
 import { formatPrice, formatCompact } from '../lib/currency';
 import CurrencyPicker from '../components/CurrencyPicker';
+import ScenePicker from '../components/ScenePicker';
 
 const SUBSCORES = [
   ['performance', '🚀 Performance'], ['value', '💲 Value'], ['efficiency', '⚡ Efficiency'],
@@ -122,6 +123,7 @@ export default function Builder() {
       <header className="topbar">
         <h1>🖥️ Build My PC</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <ScenePicker />
           <CurrencyPicker />
           <Link className="btn" to="/">🏠 Home</Link>
           <button className="btn" onClick={() => setScoringOpen(true)}>📊 Scoring &amp; Rules</button>

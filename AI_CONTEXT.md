@@ -91,9 +91,16 @@ and compete on a global leaderboard (no login required).
   emissive elements (`toneMapped={false}`, emissiveIntensity>1) so Bloom catches
   them, `meshPhysicalMaterial` transmission for the tempered-glass side panel.
   Each part renders `GlbModel` instead when its `modelUrl` is set.
-- `src/scene/BuildScene.tsx` = dark studio: self-contained `Environment` built from
-  `Lightformer`s (no external HDRI fetch), `<Canvas flat>` + `ToneMapping` ACES,
-  `EffectComposer` (Bloom + Vignette), `ContactShadows`, shadow-casting key light.
+- `src/scene/BuildScene.tsx` = self-contained `Environment` built from `Lightformer`s
+  (no external HDRI fetch), `<Canvas flat>` + `ToneMapping` ACES, `EffectComposer`
+  (Bloom + Vignette), `ContactShadows`, shadow-casting key light + glass-side fill.
+  Background/environment is selectable (`store/sceneStore.ts` + `ScenePicker`):
+  studio / space (drei `Stars`) / white / workshop / carbon — each sets bg, fog,
+  lights, ground, bloom/vignette. NOTE: set bg/fog imperatively via `SceneBackground`
+  (`scene.background`/`scene.fog`) — declarative `<color args>`/`<fog args>` don't
+  update on arg change. Lights that change at runtime use props, not `args`.
+- Fans (`Fan` in parts.tsx) use 11 wide, opaque, pitched blades + dark backing disc +
+  lit hub so they read as a fan from any angle (thin/transparent blades vanished).
   Layout anchored to case interior bounds (motherboard tray on +X; camera views the
   open −X side), `Drop` entrance animation, fan spin tied to `phase`. GLB-loading
   parts must stay inside the `<Suspense>` in `Rig`. Validation is deferred: no hints

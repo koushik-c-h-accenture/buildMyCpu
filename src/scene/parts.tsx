@@ -15,8 +15,13 @@ function Glb({ c, fit }: { c: BaseComponent; fit: number }) {
 const maxDim = (c: BaseComponent) =>
   Math.max(c.dimensions.length, c.dimensions.width, c.dimensions.height) * S;
 
-/** A spinning fan: square frame, hub, swept blades, and a bloom-friendly RGB ring. */
-export function Fan({ radius = 0.45, color = '#15151b', glow = '#26e0ff', frame = true }:
+/**
+ * A spinning fan that reads as a real fan from any angle: square frame, a dark
+ * backing disc, a solid lit hub, 11 wide overlapping pitched blades (opaque, so
+ * they never vanish), and a bloom-friendly RGB ring. The fan body lies in the XY
+ * plane and spins about +Z.
+ */
+export function Fan({ radius = 0.45, glow = '#26e0ff', frame = true }:
   { radius?: number; color?: string; glow?: string; frame?: boolean }) {
   const ref = useRef<THREE.Group>(null);
   const ring = useRef<THREE.MeshStandardMaterial>(null);
@@ -29,16 +34,15 @@ export function Fan({ radius = 0.45, color = '#15151b', glow = '#26e0ff', frame 
     if (ring.current) ring.current.emissiveIntensity = phase === 'testing' ? 3.2 : 1.8;
   });
   const blades = [];
-  const n = 9;
+  const n = 11;
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
-    // group rotates the blade around the hub; inner mesh is pitched (tilted) on
-    // its radial axis so it visibly "scoops" air — like a real fan blade.
+    // wide, opaque, pitched blades that overlap into a near-solid impeller disc
     blades.push(
       <group key={i} rotation={[0, 0, a]}>
-        <mesh position={[radius * 0.52, 0, 0]} rotation={[0.55, 0, 0]}>
-          <boxGeometry args={[radius * 0.6, radius * 0.34, radius * 0.05]} />
-          <meshStandardMaterial color={color} metalness={0.15} roughness={0.5} transparent opacity={0.9} />
+        <mesh position={[radius * 0.52, 0, 0]} rotation={[0.6, 0, 0]} castShadow>
+          <boxGeometry args={[radius * 0.82, radius * 0.5, radius * 0.045]} />
+          <meshStandardMaterial color="#6b727f" metalness={0.25} roughness={0.55} side={THREE.DoubleSide} envMapIntensity={1} />
         </mesh>
       </group>,
     );
@@ -47,35 +51,40 @@ export function Fan({ radius = 0.45, color = '#15151b', glow = '#26e0ff', frame 
   return (
     <group>
       {frame && (
+        // square housing with a chamfered look (outer + slightly inset face)
         <group>
-          {/* square housing frame */}
-          <mesh>
-            <boxGeometry args={[s, s, radius * 0.4]} />
-            <meshStandardMaterial color="#0c0c11" metalness={0.5} roughness={0.5} />
+          <mesh castShadow>
+            <boxGeometry args={[s, s, radius * 0.36]} />
+            <meshStandardMaterial color="#2a2d34" metalness={0.5} roughness={0.5} />
           </mesh>
-          {/* circular bore (slightly proud, dark) */}
-          <mesh position={[0, 0, radius * 0.04]}>
-            <cylinderGeometry args={[radius * 1.02, radius * 1.02, radius * 0.46, 32]} />
-            <meshStandardMaterial color="#070709" metalness={0.4} roughness={0.7} />
+          <mesh position={[0, 0, radius * 0.02]}>
+            <boxGeometry args={[s * 0.98, s * 0.98, radius * 0.38]} />
+            <meshStandardMaterial color="#191c22" metalness={0.4} roughness={0.6} />
           </mesh>
         </group>
       )}
-      {/* glowing RGB ring */}
-      <mesh position={[0, 0, radius * 0.16]}>
-        <torusGeometry args={[radius * 0.95, radius * 0.055, 10, 40]} />
+      {/* dark backing disc so the lit blades always silhouette against it */}
+      <mesh position={[0, 0, -radius * 0.02]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[radius * 0.96, radius * 0.96, radius * 0.04, 36]} />
+        <meshStandardMaterial color="#15171d" metalness={0.3} roughness={0.7} />
+      </mesh>
+      {/* glowing RGB ring (front rim) */}
+      <mesh position={[0, 0, radius * 0.14]}>
+        <torusGeometry args={[radius * 0.95, radius * 0.05, 12, 44]} />
         <meshStandardMaterial ref={ring} color={glow} emissive={glow} emissiveIntensity={1.8} toneMapped={false} />
       </mesh>
       <group ref={ref} position={[0, 0, radius * 0.06]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[radius * 0.3, radius * 0.3, radius * 0.22, 20]} />
-          <meshStandardMaterial color="#1a1a22" metalness={0.6} roughness={0.35} />
-        </mesh>
-        {/* hub badge */}
-        <mesh position={[0, 0, radius * 0.12]}>
-          <cylinderGeometry args={[radius * 0.16, radius * 0.16, 0.02, 20]} />
-          <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={0.6} toneMapped={false} />
-        </mesh>
         {blades}
+        {/* lit central hub */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[radius * 0.3, radius * 0.32, radius * 0.2, 24]} />
+          <meshStandardMaterial color="#3a3e47" metalness={0.55} roughness={0.4} />
+        </mesh>
+        {/* hub badge glow */}
+        <mesh position={[0, 0, radius * 0.12]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[radius * 0.17, radius * 0.17, 0.02, 24]} />
+          <meshStandardMaterial color={glow} emissive={glow} emissiveIntensity={0.8} toneMapped={false} />
+        </mesh>
       </group>
     </group>
   );
@@ -247,9 +256,9 @@ export function PsuPart({ c }: { c: Psu }) {
         <boxGeometry args={[0.016, h * 0.6, d * 0.55]} />
         <meshStandardMaterial color={c.color} metalness={0.6} roughness={0.4} emissive={c.color} emissiveIntensity={0.25} />
       </mesh>
-      {/* intake fan grille on top */}
-      <group position={[0, h * 0.5 + 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <Fan radius={Math.min(0.62, w * 0.42)} color="#0c0c10" glow="#2f6df0" frame={false} />
+      {/* intake fan (with housing) on top */}
+      <group position={[0, h * 0.5 + 0.02, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <Fan radius={Math.min(0.62, w * 0.42)} glow="#2f6df0" />
       </group>
     </group>
   );
