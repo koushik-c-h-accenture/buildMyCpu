@@ -101,6 +101,11 @@ and compete on a global leaderboard (no login required).
   update on arg change. Lights that change at runtime use props, not `args`.
 - Fans (`Fan` in parts.tsx) use 11 wide, opaque, pitched blades + dark backing disc +
   lit hub so they read as a fan from any angle (thin/transparent blades vanished).
+- Layout in `Rig` is anchored to the case interior (not magic constants): board flush
+  on +X above the PSU shroud; CPU/cooler upper area; GPU is a HORIZONTAL card in the
+  PCIe slot below the CPU (GpuPart axes: length→Z, width→X-toward-glass, height→Y-thick,
+  fans face −Y); PSU tucked in the basement under the shroud; case fans at the front (−Z).
+  Air-cooler fan faces −X (glass) so its blades are visible to the camera.
   Layout anchored to case interior bounds (motherboard tray on +X; camera views the
   open −X side), `Drop` entrance animation, fan spin tied to `phase`. GLB-loading
   parts must stay inside the `<Suspense>` in `Rig`. Validation is deferred: no hints
