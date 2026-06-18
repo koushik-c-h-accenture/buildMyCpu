@@ -203,40 +203,47 @@ export function RamPart({ c }: { c: Ram }) {
   return <group>{sticks}</group>;
 }
 
+/**
+ * Horizontal graphics card mounted in the top PCIe slot. Axes:
+ *   length (~300mm) → Z (front-back, longest)
+ *   width  (~140mm) → X (board → glass, how far it juts out)
+ *   height (~60mm)  → Y (2-3 slot thickness, vertical)
+ * Fans sit on the underside facing down (−Y), like a real card.
+ */
 export function GpuPart({ c }: { c: Gpu }) {
   if (c.modelUrl) return <Glb c={c} fit={maxDim(c)} />;
-  const len = c.dimensions.length * S; // -> Z
-  const ht = c.dimensions.width * S;   // -> Y
-  const th = c.dimensions.height * S;  // -> X (thickness)
+  const len = c.dimensions.length * S;   // Z
+  const reach = c.dimensions.width * S;  // X (toward glass)
+  const thick = c.dimensions.height * S; // Y (slot thickness)
   const fanCount = len > 2.6 ? 3 : 2;
-  const fanR = Math.min(0.52, (len / fanCount) / 2 - 0.05, ht * 0.42);
+  const fanR = Math.min(0.5, (len / fanCount) / 2 - 0.04, reach * 0.42);
   const fans = [];
   for (let i = 0; i < fanCount; i++) {
     const z = -len / 2 + (len / fanCount) * (i + 0.5);
     fans.push(
-      <group key={i} position={[-th * 0.5 - 0.01, -ht * 0.04, z]} rotation={[0, Math.PI / 2, 0]}>
-        <Fan radius={fanR} color="#0e0e14" glow="#39ffcf" />
+      <group key={i} position={[0, -thick * 0.5 - 0.005, z]} rotation={[Math.PI / 2, 0, 0]}>
+        <Fan radius={fanR} glow="#39ffcf" />
       </group>,
     );
   }
   return (
     <group>
-      {/* shroud */}
-      <Box size={[th, ht, len]} color={c.color} metalness={0.6} roughness={0.42} edges="#08080a" env={1.1} />
-      {/* darker top channel */}
-      <mesh position={[0, ht * 0.5 + 0.005, 0]}>
-        <boxGeometry args={[th * 0.96, 0.02, len * 0.98]} />
-        <meshStandardMaterial color="#101015" metalness={0.7} roughness={0.4} />
+      {/* shroud (card body) */}
+      <Box size={[reach, thick, len]} color={c.color} metalness={0.6} roughness={0.42} edges="#08080a" env={1.1} />
+      {/* backplate on top (+Y) */}
+      <mesh position={[0, thick * 0.5 + 0.008, 0]} castShadow>
+        <boxGeometry args={[reach * 0.96, 0.02, len * 0.96]} />
+        <meshStandardMaterial color="#15151b" metalness={0.7} roughness={0.35} />
       </mesh>
-      {/* RGB logo strip along the top edge */}
-      <mesh position={[0, ht * 0.5 + 0.018, len * 0.1]}>
-        <boxGeometry args={[th * 0.5, 0.012, len * 0.34]} />
+      {/* RGB logo strip along the glass-facing edge */}
+      <mesh position={[-reach * 0.5 - 0.006, thick * 0.1, len * 0.04]}>
+        <boxGeometry args={[0.012, thick * 0.4, len * 0.32]} />
         <meshStandardMaterial color={c.color} emissive={c.color} emissiveIntensity={1.5} toneMapped={false} />
       </mesh>
-      {/* backplate */}
-      <mesh position={[th * 0.5 + 0.012, 0, 0]} castShadow>
-        <boxGeometry args={[0.02, ht * 0.96, len * 0.96]} />
-        <meshStandardMaterial color="#15151b" metalness={0.7} roughness={0.35} />
+      {/* PCIe bracket toward the board (+X, rear corner) */}
+      <mesh position={[reach * 0.5 + 0.02, 0, len * 0.46]}>
+        <boxGeometry args={[0.04, thick * 1.25, 0.08]} />
+        <meshStandardMaterial color="#9a9da3" metalness={0.8} roughness={0.3} />
       </mesh>
       {fans}
     </group>
@@ -304,9 +311,9 @@ export function CoolerPart({ c }: { c: Cooler }) {
           <boxGeometry args={[0.12, 0.16, 0.42]} />
           <meshStandardMaterial color="#2a2a32" metalness={0.85} roughness={0.28} />
         </mesh>
-        {/* fan on the -X face */}
-        <group position={[-hX * 0.54, wY * 0.1, 0]} rotation={[0, Math.PI / 2, 0]}>
-          <Fan radius={Math.min(0.6, wY * 0.42)} color={c.color} glow="#26e0ff" />
+        {/* fan on the -X (glass) face, facing the camera so blades are visible */}
+        <group position={[-hX * 0.54, wY * 0.1, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <Fan radius={Math.min(0.6, wY * 0.42)} glow="#26e0ff" />
         </group>
       </group>
     );
@@ -568,7 +575,7 @@ export function CaseShell({ c }: { c: Case }) {
   const h = c.dimensions.height * S;
   const d = c.dimensions.length * S;
   const frame = '#0d0d11';
-  const shroudH = Math.max(0.26, h * 0.15);   // basement-cover height scales with the case
+  const shroudH = Math.max(0.85, h * 0.17);   // basement-cover height (houses the PSU)
   return (
     <group>
       {/* steel frame edges */}
