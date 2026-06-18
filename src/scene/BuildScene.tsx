@@ -1,11 +1,12 @@
-import { Suspense, useRef, type ReactNode } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Html, ContactShadows, Environment, Lightformer } from '@react-three/drei';
+import { Suspense, useEffect, useRef, type ReactNode } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { OrbitControls, Html, ContactShadows, Environment, Lightformer, Stars } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette, ToneMapping } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
 import * as THREE from 'three';
 import type { Build, Case, Cooler } from '../lib/types';
 import { useBuildStore } from '../store/buildStore';
+import { useSceneStore, type SceneStyle } from '../store/sceneStore';
 import {
   CaseShell, MoboPart, CpuPart, RamPart, GpuPart, PsuPart, CoolerPart, RadiatorPart,
   StoragePart, FansPart, Burst, Airflow, Vents, S,
@@ -87,6 +88,17 @@ function Rig({ build }: { build: Build }) {
   );
 }
 
+/** Imperatively drives scene background + fog so runtime scene switches apply
+ *  reliably (declarative `<color args>` / `<fog args>` don't update on arg change). */
+function SceneBackground({ color, fog }: { color: string; fog: [number, number] | null }) {
+  const scene = useThree((s) => s.scene);
+  useEffect(() => {
+    scene.background = new THREE.Color(color);
+    scene.fog = fog ? new THREE.Fog(color, fog[0], fog[1]) : null;
+  }, [scene, color, fog]);
+  return null;
+}
+
 /** Self-contained studio lighting environment (no external HDRI fetch). */
 function Studio() {
   return (
@@ -99,8 +111,24 @@ function Studio() {
   );
 }
 
+interface SceneCfg {
+  bg: string; fog: [number, number] | null; stars: boolean;
+  ground: string | null; grid: [string, string] | null;
+  amb: number; hemi: number; hemiSky: string; hemiGround: string;
+  vignette: number; bloom: number; hintColor: string;
+}
+const SCENES: Record<SceneStyle, SceneCfg> = {
+  studio:   { bg: '#c7ccd6', fog: [20, 46], stars: false, ground: '#aeb4c0', grid: ['#9aa1ad', '#b6bcc6'], amb: 0.95, hemi: 0.8, hemiSky: '#ffffff', hemiGround: '#9098a4', vignette: 0.22, bloom: 0.5, hintColor: '#3a4150' },
+  light:    { bg: '#eef1f6', fog: [22, 50], stars: false, ground: '#dfe3ea', grid: ['#d2d7df', '#e6e9ef'], amb: 1.15, hemi: 0.95, hemiSky: '#ffffff', hemiGround: '#c4cad3', vignette: 0.18, bloom: 0.45, hintColor: '#4a5160' },
+  space:    { bg: '#05060e', fog: null, stars: true, ground: null, grid: null, amb: 0.5, hemi: 0.5, hemiSky: '#9fb4ff', hemiGround: '#0a0c14', vignette: 0.38, bloom: 0.75, hintColor: '#9aa4b8' },
+  workshop: { bg: '#241f18', fog: [16, 40], stars: false, ground: '#3a2f22', grid: ['#3a3024', '#2a231a'], amb: 0.75, hemi: 0.6, hemiSky: '#ffe6c4', hemiGround: '#241c12', vignette: 0.32, bloom: 0.6, hintColor: '#d8c4a0' },
+  carbon:   { bg: '#0a0c12', fog: [14, 30], stars: false, ground: null, grid: ['#1c2230', '#12161f'], amb: 0.7, hemi: 0.6, hemiSky: '#dfe8ff', hemiGround: '#2a2e38', vignette: 0.32, bloom: 0.7, hintColor: '#9aa4b8' },
+};
+
 export default function BuildScene({ build }: { build: Build }) {
   const empty = Object.keys(build).length === 0;
+  const style = useSceneStore((s) => s.style);
+  const cfg = SCENES[style];
   return (
     <Canvas
       flat
@@ -109,11 +137,11 @@ export default function BuildScene({ build }: { build: Build }) {
       camera={{ position: [-5.5, 3.2, 5.5], fov: 42 }}
       gl={{ antialias: true, powerPreference: 'high-performance' }}
     >
-      <color attach="background" args={['#0a0c12']} />
-      <fog attach="fog" args={['#0a0c12', 14, 30]} />
+      <SceneBackground color={cfg.bg} fog={cfg.fog} />
+      {cfg.stars && <Stars radius={120} depth={60} count={6000} factor={4} saturation={0} fade speed={0.6} />}
 
-      <ambientLight intensity={0.7} />
-      <hemisphereLight args={['#dfe8ff', '#2a2e38', 0.6]} />
+      <ambientLight intensity={cfg.amb} />
+      <hemisphereLight intensity={cfg.hemi} color={cfg.hemiSky} groundColor={cfg.hemiGround} />
       <directionalLight position={[-6, 9, 6]} intensity={2.6} castShadow shadow-mapSize={[2048, 2048]} shadow-bias={-0.0001}>
         <orthographicCamera attach="shadow-camera" args={[-8, 8, 8, -8, 0.1, 30]} />
       </directionalLight>
@@ -128,11 +156,17 @@ export default function BuildScene({ build }: { build: Build }) {
       </Suspense>
 
       {!empty && <ContactShadows position={[0, -2.4, 0]} opacity={0.55} scale={16} blur={2.8} far={6} resolution={1024} color="#000000" />}
-      <gridHelper args={[30, 30, '#1c2230', '#12161f']} position={[0, -2.42, 0]} />
+      {cfg.ground && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2.43, 0]} receiveShadow>
+          <planeGeometry args={[80, 80]} />
+          <meshStandardMaterial color={cfg.ground} roughness={0.92} metalness={0} />
+        </mesh>
+      )}
+      {cfg.grid && <gridHelper args={[30, 30, cfg.grid[0], cfg.grid[1]]} position={[0, -2.42, 0]} />}
 
       {empty && (
         <Html center zIndexRange={[20, 0]}>
-          <div style={{ color: '#9aa4b8', fontFamily: 'system-ui', fontSize: 14, whiteSpace: 'nowrap' }}>
+          <div style={{ color: cfg.hintColor, fontFamily: 'system-ui', fontSize: 14, whiteSpace: 'nowrap' }}>
             Start building — pick any components →
           </div>
         </Html>
@@ -141,8 +175,8 @@ export default function BuildScene({ build }: { build: Build }) {
       <OrbitControls enablePan enableZoom enableDamping dampingFactor={0.08} minDistance={3} maxDistance={24} target={[0, 0, 0]} />
 
       <EffectComposer>
-        <Bloom mipmapBlur luminanceThreshold={1.1} luminanceSmoothing={0.2} intensity={0.6} radius={0.7} />
-        <Vignette offset={0.25} darkness={0.32} eskil={false} />
+        <Bloom mipmapBlur luminanceThreshold={1.1} luminanceSmoothing={0.2} intensity={cfg.bloom} radius={0.7} />
+        <Vignette offset={0.25} darkness={cfg.vignette} eskil={false} />
         <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       </EffectComposer>
     </Canvas>
