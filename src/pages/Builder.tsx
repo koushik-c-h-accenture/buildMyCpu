@@ -118,6 +118,13 @@ export default function Builder() {
     setSubmitState({ busy: false, msg: r.ok ? `✅ Submitted! Rank #${r.rank ?? '—'}` : `⚠️ ${r.error}` });
   };
 
+  // Esc closes whichever modal is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { setModalOpen(false); setScoringOpen(false); } };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
   return (
     <div className="builder">
       <header className="topbar">

@@ -193,3 +193,24 @@ code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
   border-radius: 8px; color: #e7ecf5; font-size: 11px; backdrop-filter: blur(3px); pointer-events: none;
 }
 .airflow-legend .al-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+
+/* ---------- responsive: stack the 3-column builder on small screens ---------- */
+@media (max-width: 980px) {
+  .builder { height: auto; min-height: 100vh; }
+  .layout { grid-template-columns: 1fr; }
+  .panel { border-right: none; border-bottom: 1px solid var(--border); max-height: 48vh; }
+  .inspector { border-left: none; border-bottom: none; }
+  .viewport { height: 58vh; min-height: 340px; }
+}
+@media (max-width: 600px) {
+  .topbar { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .topbar h1 { font-size: 15px; width: 100%; }
+  .topbar > div { flex-wrap: wrap; }
+  .viewport { height: 50vh; min-height: 300px; }
+  .panel { max-height: 52vh; padding: 12px; }
+  .currency-picker { padding: 6px 8px; font-size: 12px; }
+  .btn { padding: 7px 10px; font-size: 12px; }
+  .compbar { gap: 10px; padding: 8px 12px; font-size: 12px; }
+  .home { padding: 18px 14px; }
+  .row2 { flex-direction: column; gap: 0; }
+}

@@ -41,8 +41,12 @@ export async function submitBuild(username: string, buildName: string, build: Bu
     return { ok: false, error: error.message + hint };
   }
 
-  const { count } = await supabase.from('builds')
+  // Rank within the same pool the leaderboard shows: this competition, or the
+  // global board (competition_id IS NULL) for free-play submissions.
+  let rankQ = supabase.from('builds')
     .select('*', { count: 'exact', head: true })
     .gt('final_score', breakdown.finalScore);
+  rankQ = competitionId ? rankQ.eq('competition_id', competitionId) : rankQ.is('competition_id', null);
+  const { count } = await rankQ;
   return { ok: true, rank: (count ?? 0) + 1, score: breakdown.finalScore };
 }
