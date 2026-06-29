@@ -42,3 +42,7 @@ pnpm-debug.log*
 # Supabase local
 .branches/
 .temp/
+
+# stray personal notes — never publish
+homeserver.md
+*.private.md
